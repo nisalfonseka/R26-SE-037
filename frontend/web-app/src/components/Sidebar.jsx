@@ -75,12 +75,16 @@ export default function Sidebar({ activeTool, onSelectTool, isOpen, onToggle, co
         `}
       >
         {/* Logo */}
-        <div className={`h-16 flex items-center gap-2 border-b border-white/15 ${collapsed ? 'px-2' : 'px-5'}`}>
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
-              <span className="text-white font-bold text-sm">S</span>
+        <div className={`h-16 flex items-center ${collapsed ? 'justify-center' : 'px-5'} border-b border-white/15`}>
+          <div className="flex items-center gap-2.5">
+            <div className="w-12 h-12 rounded-lg p-1.5 shrink-0 overflow-hidden">
+              <img
+                src="/logo.png"
+                alt="SinAi logo"
+                className="w-full h-full object-contain"
+              />
             </div>
-            {!collapsed && <span className="font-bold text-[17px] text-white tracking-tight">SinAi</span>}
+            {!collapsed && <span className="font-bold text-[17px] text-white tracking-tight">Sin-Ai</span>}
           </div>
 
           <button
