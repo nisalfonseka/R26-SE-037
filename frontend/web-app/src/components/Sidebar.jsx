@@ -75,13 +75,22 @@ export default function Sidebar({ activeTool, onSelectTool, isOpen, onToggle, co
         `}
       >
         {/* Logo */}
-        <div className={`h-16 flex items-center ${collapsed ? 'justify-center' : 'px-5'} border-b border-white/15`}>
-          <div className="flex items-center gap-2.5">
+        <div className={`h-16 flex items-center gap-2 border-b border-white/15 ${collapsed ? 'px-2' : 'px-5'}`}>
+          <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
               <span className="text-white font-bold text-sm">S</span>
             </div>
             {!collapsed && <span className="font-bold text-[17px] text-white tracking-tight">SinAi</span>}
           </div>
+
+          <button
+            id="sidebar-collapse"
+            onClick={onCollapse}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="hidden lg:flex items-center justify-center ml-auto w-8 h-8 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors duration-100 cursor-pointer"
+          >
+            {collapsed ? <ChevronRight size={19} strokeWidth={1.8} /> : <ChevronLeft size={19} strokeWidth={1.8} />}
+          </button>
         </div>
 
         {/* Main navigation */}
@@ -92,22 +101,6 @@ export default function Sidebar({ activeTool, onSelectTool, isOpen, onToggle, co
         {/* Bottom section */}
         <div className={`border-t border-white/15 py-3 ${collapsed ? 'px-2' : 'px-3'} space-y-0.5`}>
           {BOTTOM_NAV.map(renderNavItem)}
-
-          {/* Collapse toggle — desktop only */}
-          <button
-            id="sidebar-collapse"
-            onClick={onCollapse}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className={`
-              w-full hidden lg:flex items-center ${collapsed ? 'justify-center' : ''} gap-3
-              ${collapsed ? 'px-0 py-2.5' : 'px-3 py-2.5'} rounded-lg
-              text-[15px] font-medium text-white/60 hover:bg-white/10 hover:text-white
-              transition-colors duration-100 cursor-pointer
-            `}
-          >
-            {collapsed ? <ChevronRight size={19} strokeWidth={1.8} /> : <ChevronLeft size={19} strokeWidth={1.8} />}
-            {!collapsed && <span>Collapse</span>}
-          </button>
         </div>
 
         {/* User profile */}
