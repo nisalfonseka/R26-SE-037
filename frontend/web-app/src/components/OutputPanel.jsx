@@ -7,7 +7,15 @@ export default function OutputPanel({ output, loading, error, type }) {
   if (loading) {
     return (
       <div id="output-loading" className="mt-6 py-12 flex items-center justify-center">
-        <span className="text-base text-gray-400 animate-subtle-pulse">Processing…</span>
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative w-16 h-16">
+            <div className="absolute inset-0 rounded-full border-4 border-gray-100 border-t-accent animate-spin" />
+            <div className="absolute inset-3 rounded-full bg-white shadow-sm flex items-center justify-center overflow-hidden">
+              <img src="/logo.png" alt="Loading" className="w-8 h-8 object-contain" />
+            </div>
+          </div>
+          <span className="text-base text-gray-400 animate-subtle-pulse">Processing…</span>
+        </div>
       </div>
     );
   }
