@@ -60,6 +60,16 @@ export default function Sidebar({ activeTool, onSelectTool, isOpen, onToggle, co
     );
   };
 
+  const getLogoColor = () => {
+    switch (activeTool) {
+      case 'grammar': return 'text-red-500';
+      case 'headlines': return 'text-orange-500';
+      case 'rewriter': return 'text-purple-500';
+      case 'summarizer': return 'text-cyan-500';
+      default: return 'text-blue-500';
+    }
+  };
+
   return (
     <>
       {isOpen && (
@@ -90,12 +100,8 @@ export default function Sidebar({ activeTool, onSelectTool, isOpen, onToggle, co
         {/* Logo */}
         <div className={`pt-8 pb-6 flex items-center gap-3 ${collapsed ? 'justify-center px-2' : 'px-8'}`}>
           <div className="flex items-center gap-1.5 min-w-0">
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shrink-0 shadow-lg relative overflow-hidden">
-               {/* Helakuru-like colorful dots logo */}
-               <div className="absolute top-1 left-2 w-3 h-3 bg-red-500 rounded-full" />
-               <div className="absolute top-1 right-2 w-3 h-3 bg-orange-500 rounded-full" />
-               <div className="absolute bottom-2 left-2 w-3 h-3 bg-green-500 rounded-full" />
-               <div className="absolute bottom-2 right-2 w-3 h-3 bg-yellow-400 rounded-full" />
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shrink-0 shadow-lg relative overflow-hidden transition-colors duration-500">
+               <span className={`${getLogoColor()} font-black text-2xl transition-colors duration-500`}>S</span>
             </div>
             {!collapsed && (
               <div className="flex flex-col">
