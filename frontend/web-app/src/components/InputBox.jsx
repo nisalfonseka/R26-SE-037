@@ -1,4 +1,4 @@
-export default function InputBox({ value, onChange, placeholder, onSubmit, disabled }) {
+export default function InputBox({ value, onChange, placeholder, onSubmit, disabled, activeTool }) {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
@@ -6,20 +6,39 @@ export default function InputBox({ value, onChange, placeholder, onSubmit, disab
     }
   };
 
+  const getBorderColor = () => {
+    switch (activeTool) {
+      case 'dashboard': return 'border-[#0ea5e9]';
+      case 'grammar': return 'border-[#ef4444]';
+      case 'headlines': return 'border-[#f97316]';
+      case 'rewriter': return 'border-[#8b5cf6]';
+      case 'summarizer': return 'border-[#06b6d4]';
+      default: return 'border-[#0ea5e9]';
+    }
+  };
+
   return (
-    <textarea
-      id="input-box"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      onKeyDown={handleKeyDown}
-      placeholder={placeholder}
-      disabled={disabled}
-      rows={9}
-      className="w-full px-4 py-3.5 text-[15px] text-gray-900 placeholder-gray-300
-        border border-gray-200 rounded-xl leading-relaxed
-        focus:outline-none focus:border-gray-300 focus:ring-1 focus:ring-gray-200
-        disabled:opacity-50 disabled:cursor-not-allowed
-        transition-colors duration-100"
-    />
+    <div className="w-full">
+      <div className="relative">
+        <textarea
+          id="input-box"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          disabled={disabled}
+          rows={9}
+          className={`w-full px-4 py-3.5 text-[15px] text-gray-900 placeholder-gray-400
+            border-2 ${getBorderColor()} rounded-xl leading-relaxed
+            focus:outline-none focus:ring-0
+            disabled:opacity-50 disabled:cursor-not-allowed
+            transition-colors duration-100 resize-y min-h-[200px] shadow-sm`}
+        />
+        <div className="absolute top-3 right-3 text-gray-400">
+           {/* small icon placeholder */}
+           <svg className="w-5 h-5 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+        </div>
+      </div>
+    </div>
   );
 }

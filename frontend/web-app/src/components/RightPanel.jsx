@@ -360,63 +360,92 @@ function HeadlineInsightsPanel({ output, loading }) {
 export default function RightPanel({ activeTool, settings, onSettingsChange, output, loading, input }) {
   if (!['grammar', 'rewriter', 'summarizer', 'headlines'].includes(activeTool)) return null;
 
+  const getThemeColor = () => {
+    switch (activeTool) {
+      case 'grammar': return 'bg-red-500';
+      case 'rewriter': return 'bg-purple-500';
+      case 'summarizer': return 'bg-cyan-500';
+      case 'headlines': return 'bg-orange-500';
+      default: return 'bg-blue-500';
+    }
+  };
+
+  const getTitle = () => {
+    switch (activeTool) {
+      case 'grammar': return 'Grammar Suggestions';
+      case 'rewriter': return 'Style Settings';
+      case 'summarizer': return 'Summarizer Options';
+      case 'headlines': return 'Headline Insights';
+      default: return 'Settings';
+    }
+  };
+
   return (
-    <aside className="hidden xl:flex flex-col w-96 shrink-0 p-4">
-      <div className="flex-1 rounded-2xl border border-gray-200 bg-white p-5 overflow-y-auto">
-        {activeTool === 'grammar' && (
-          <GrammarSuggestionsPanel output={output} loading={loading} input={input} />
-        )}
+    <aside className="hidden xl:flex flex-col w-80 shrink-0 pr-8 py-8 pl-4">
+      {/* Banner */}
+      <div className="rounded-2xl bg-white shadow-xl overflow-hidden flex flex-col h-full border border-gray-100">
+        <div className={`h-32 ${getThemeColor()} flex items-end justify-center pb-4 relative overflow-hidden shrink-0`}>
+          {/* subtle background pattern in banner */}
+          <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '16px 16px' }} />
+          <h2 className="text-xl font-bold text-white relative z-10">{getTitle()}</h2>
+        </div>
 
-        {activeTool === 'rewriter' && (
-          <OptionGroup
-            label="Tone"
-            options={TONES}
-            value={settings.tone}
-            onChange={(v) => onSettingsChange({ ...settings, tone: v })}
-          />
-        )}
+        <div className="p-5 flex-1 overflow-y-auto bg-gray-50/50">
+          {activeTool === 'grammar' && (
+            <GrammarSuggestionsPanel output={output} loading={loading} input={input} />
+          )}
 
-        {activeTool === 'summarizer' && (
-          <OptionGroup
-            label="Length"
-            options={LENGTHS}
-            value={settings.length}
-            onChange={(v) => onSettingsChange({ ...settings, length: v })}
-          />
-        )}
+          {activeTool === 'rewriter' && (
+            <OptionGroup
+              label="Tone"
+              options={TONES}
+              value={settings.tone}
+              onChange={(v) => onSettingsChange({ ...settings, tone: v })}
+            />
+          )}
 
-        {activeTool === 'headlines' && (
-          <>
-            {/* Settings section — shown when no output yet */}
-            {!output && !loading && (
-              <>
-                <OptionGroup
-                  label="Style"
-                  options={HEADLINE_STYLES}
-                  value={settings.headlineStyle}
-                  onChange={(v) => onSettingsChange({ ...settings, headlineStyle: v })}
-                />
-                <OptionGroup
-                  label="Max Length"
-                  options={MAX_LENGTHS}
-                  value={settings.headlineMaxLength}
-                  onChange={(v) => onSettingsChange({ ...settings, headlineMaxLength: v })}
-                />
-                <OptionGroup
-                  label="Count"
-                  options={HEADLINE_COUNTS}
-                  value={settings.count}
-                  onChange={(v) => onSettingsChange({ ...settings, count: v })}
-                />
-              </>
-            )}
+          {activeTool === 'summarizer' && (
+            <OptionGroup
+              label="Length"
+              options={LENGTHS}
+              value={settings.length}
+              onChange={(v) => onSettingsChange({ ...settings, length: v })}
+            />
+          )}
 
-            {/* Insights panel — shown when loading or output exists */}
-            {(loading || output) && (
-              <HeadlineInsightsPanel output={output} loading={loading} />
-            )}
-          </>
-        )}
+          {activeTool === 'headlines' && (
+            <>
+              {/* Settings section — shown when no output yet */}
+              {!output && !loading && (
+                <>
+                  <OptionGroup
+                    label="Style"
+                    options={HEADLINE_STYLES}
+                    value={settings.headlineStyle}
+                    onChange={(v) => onSettingsChange({ ...settings, headlineStyle: v })}
+                  />
+                  <OptionGroup
+                    label="Max Length"
+                    options={MAX_LENGTHS}
+                    value={settings.headlineMaxLength}
+                    onChange={(v) => onSettingsChange({ ...settings, headlineMaxLength: v })}
+                  />
+                  <OptionGroup
+                    label="Count"
+                    options={HEADLINE_COUNTS}
+                    value={settings.count}
+                    onChange={(v) => onSettingsChange({ ...settings, count: v })}
+                  />
+                </>
+              )}
+
+              {/* Insights panel — shown when loading or output exists */}
+              {(loading || output) && (
+                <HeadlineInsightsPanel output={output} loading={loading} />
+              )}
+            </>
+          )}
+        </div>
       </div>
     </aside>
   );

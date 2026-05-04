@@ -124,17 +124,18 @@ function App() {
               placeholder={config.placeholder}
               onSubmit={handleRun}
               disabled={loading}
+              activeTool={activeTool}
             />
 
-            <div className="flex items-center gap-3 mt-4">
+            <div className="flex items-center gap-3 mt-4 justify-end w-full">
               <button
                 id="btn-run"
                 onClick={handleRun}
                 disabled={loading || !input.trim()}
-                className="px-6 py-2.5 bg-accent text-white text-base font-medium rounded-lg
-                  hover:bg-accent-hover active:scale-[0.98]
+                className={`px-8 py-2 text-white text-[15px] font-semibold rounded-full shadow-sm
+                  ${getButtonColor(activeTool)} active:scale-[0.98]
                   disabled:opacity-40 disabled:cursor-not-allowed
-                  transition-all duration-100 cursor-pointer"
+                  transition-all duration-100 cursor-pointer`}
               >
                 {config.actionLabel}
               </button>
@@ -142,14 +143,13 @@ function App() {
                 id="btn-clear"
                 onClick={clear}
                 disabled={loading}
-                className="px-5 py-2.5 text-base font-medium text-gray-400 rounded-lg
-                  hover:text-gray-600 hover:bg-gray-50
+                className={`px-6 py-2 text-[15px] font-semibold text-white rounded-full shadow-sm
+                  ${getButtonColor(activeTool)} active:scale-[0.98]
                   disabled:opacity-40 disabled:cursor-not-allowed
-                  transition-colors duration-100 cursor-pointer"
+                  transition-all duration-100 cursor-pointer`}
               >
                 Clear
               </button>
-              <span className="text-sm text-gray-300 ml-auto hidden sm:inline">⌘ Enter</span>
             </div>
 
             {/* Use dedicated panel for headlines, generic for others */}
@@ -172,8 +172,36 @@ function App() {
     }
   };
 
+  const getBgColor = () => {
+    switch (activeTool) {
+      case 'dashboard': return 'bg-[#0ea5e9]'; // blue
+      case 'grammar': return 'bg-[#ef4444]'; // red
+      case 'headlines': return 'bg-[#f97316]'; // orange
+      case 'rewriter': return 'bg-[#8b5cf6]'; // purple
+      case 'summarizer': return 'bg-[#06b6d4]'; // cyan
+      case 'history': return 'bg-[#f43f5e]'; // rose
+      case 'settings': return 'bg-[#10b981]'; // green
+      case 'profile': return 'bg-[#64748b]'; // slate
+      default: return 'bg-[#0ea5e9]';
+    }
+  };
+
+  const getButtonColor = (tool) => {
+    switch (tool) {
+      case 'dashboard': return 'bg-[#0ea5e9] hover:bg-[#0284c7]';
+      case 'grammar': return 'bg-[#ef4444] hover:bg-[#dc2626]';
+      case 'headlines': return 'bg-[#f97316] hover:bg-[#ea580c]';
+      case 'rewriter': return 'bg-[#8b5cf6] hover:bg-[#7c3aed]';
+      case 'summarizer': return 'bg-[#06b6d4] hover:bg-[#0891b2]';
+      case 'history': return 'bg-[#f43f5e] hover:bg-[#e11d48]';
+      case 'settings': return 'bg-[#10b981] hover:bg-[#059669]';
+      case 'profile': return 'bg-[#64748b] hover:bg-[#475569]';
+      default: return 'bg-[#0ea5e9] hover:bg-[#0284c7]';
+    }
+  };
+
   return (
-    <div className="h-full flex">
+    <div className={`h-full flex ${getBgColor()} pattern-bg transition-colors duration-500`}>
       <Sidebar
         activeTool={activeTool}
         onSelectTool={handleSelectTool}
@@ -183,23 +211,25 @@ function App() {
         onCollapse={() => setSidebarCollapsed((v) => !v)}
       />
 
-      <main className="flex-1 min-w-0 flex">
-        <div className="flex-1 min-w-0 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-6 py-8 lg:pl-8">
-            {renderContent()}
+      <main className="flex-1 flex flex-col bg-[#f8fafc] rounded-tl-[2rem] sm:rounded-tl-[3rem] my-2 mr-2 sm:my-4 sm:mr-4 shadow-2xl relative overflow-hidden">
+        <div className="flex-1 flex min-w-0 overflow-y-auto">
+          <div className="flex-1 min-w-0 flex justify-center">
+            <div className="w-full max-w-4xl px-4 py-6 sm:px-8 sm:py-8">
+              {renderContent()}
+            </div>
           </div>
-        </div>
 
-        {isTool && (
-          <RightPanel
-            activeTool={activeTool}
-            settings={settings}
-            onSettingsChange={setSettings}
-            output={output}
-            loading={loading}
-            input={input}
-          />
-        )}
+          {isTool && (
+            <RightPanel
+              activeTool={activeTool}
+              settings={settings}
+              onSettingsChange={setSettings}
+              output={output}
+              loading={loading}
+              input={input}
+            />
+          )}
+        </div>
       </main>
     </div>
   );
