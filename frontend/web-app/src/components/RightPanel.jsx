@@ -1,4 +1,7 @@
-import { AlertCircle, CheckCircle2, Lightbulb, BookOpen } from 'lucide-react';
+import {
+  AlertCircle, CheckCircle2, Lightbulb, BookOpen,
+  Newspaper, BarChart3, Tag, Sparkles
+} from 'lucide-react';
 
 // ─── Settings Panels ─────────────────────────────────────────────────────────
 
@@ -13,10 +16,23 @@ const LENGTHS = [
   { id: 'medium', label: 'Medium' },
 ];
 
+const HEADLINE_STYLES = [
+  { id: 'formal',        label: 'Formal',        desc: 'Authoritative, broadsheet tone' },
+  { id: 'breaking_news', label: 'Breaking News', desc: 'Urgent, attention-grabbing' },
+  { id: 'youth',         label: 'Youth',         desc: 'Casual, social media friendly' },
+  { id: 'editorial',     label: 'Editorial',     desc: 'Analytical, thought-provoking' },
+];
+
 const HEADLINE_COUNTS = [
   { id: 3, label: '3 Headlines' },
   { id: 5, label: '5 Headlines' },
   { id: 7, label: '7 Headlines' },
+];
+
+const MAX_LENGTHS = [
+  { id: 60,  label: 'Short (60 chars)' },
+  { id: 80,  label: 'Medium (80 chars)' },
+  { id: 120, label: 'Long (120 chars)' },
 ];
 
 function OptionGroup({ label, options, value, onChange }) {
@@ -39,7 +55,14 @@ function OptionGroup({ label, options, value, onChange }) {
               }
             `}
           >
-            {opt.label}
+            <span>{opt.label}</span>
+            {opt.desc && (
+              <span className={`block text-[11px] mt-0.5 ${
+                value === opt.id ? 'text-red-400' : 'text-gray-400'
+              }`}>
+                {opt.desc}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -183,6 +206,155 @@ function GrammarSuggestionsPanel({ output, loading, input }) {
   );
 }
 
+// ─── Headline Insights Panel ──────────────────────────────────────────────────
+
+function HeadlineInsightsPanel({ output, loading }) {
+  if (loading) {
+    return (
+      <>
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
+          Pipeline Insights
+        </h2>
+        <div className="flex flex-col gap-2.5">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="h-14 bg-gray-100 rounded-2xl animate-subtle-pulse" />
+          ))}
+        </div>
+      </>
+    );
+  }
+
+  if (!output) {
+    return (
+      <>
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
+          Pipeline Insights
+        </h2>
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <Newspaper size={30} className="text-gray-200 mb-3" />
+          <p className="text-sm text-gray-400 leading-relaxed">
+            Generate headlines to see pipeline insights here.
+          </p>
+        </div>
+      </>
+    );
+  }
+
+  const candidates = output.candidates || [];
+  const passed = candidates.filter(c => c.passed_validation).length;
+  const entities = output.source_entities || [];
+  const semantics = output.semantic_extraction || {};
+  const pipelineLog = output.pipeline_log || [];
+  const totalTime = pipelineLog.reduce((sum, l) => sum + l.duration_ms, 0);
+
+  return (
+    <div className="space-y-5">
+      {/* Summary stats */}
+      <div>
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+          <BarChart3 size={12} /> Pipeline Summary
+        </h2>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="px-3 py-2.5 bg-gray-50 rounded-xl text-center">
+            <p className="text-lg font-bold text-gray-800">{candidates.length}</p>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider">Candidates</p>
+          </div>
+          <div className="px-3 py-2.5 bg-emerald-50 rounded-xl text-center">
+            <p className="text-lg font-bold text-emerald-600">{passed}</p>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider">Passed</p>
+          </div>
+          <div className="px-3 py-2.5 bg-blue-50 rounded-xl text-center">
+            <p className="text-lg font-bold text-blue-600">{entities.length}</p>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider">Entities</p>
+          </div>
+          <div className="px-3 py-2.5 bg-amber-50 rounded-xl text-center">
+            <p className="text-lg font-bold text-amber-600">{totalTime.toFixed(0)}<span className="text-xs font-normal">ms</span></p>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider">Total Time</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Regeneration warning */}
+      {output.regeneration_count > 0 && (
+        <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 rounded-xl border border-amber-100">
+          <AlertCircle size={14} className="text-amber-500 shrink-0 mt-0.5" />
+          <p className="text-[12px] text-amber-700">
+            Pipeline triggered <strong>{output.regeneration_count}</strong> regeneration{output.regeneration_count > 1 ? 's' : ''} to meet quality thresholds.
+          </p>
+        </div>
+      )}
+
+      {/* Top candidate metrics */}
+      {candidates.length > 0 && (
+        <div>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+            <Sparkles size={12} /> Best Headline Metrics
+          </h2>
+          {(() => {
+            const best = candidates[0];
+            const m = best.metrics;
+            return (
+              <div className="space-y-2">
+                {[
+                  ['ROUGE-1',       m.rouge_1],
+                  ['ROUGE-2',       m.rouge_2],
+                  ['Semantic Sim.', m.semantic_similarity],
+                  ['Entity Cov.',   m.entity_coverage],
+                ].map(([label, val]) => (
+                  <div key={label} className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-gray-500">{label}</span>
+                      <span className="text-gray-600 font-semibold">{(val * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-accent/70 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(val * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Entity distribution */}
+      {entities.length > 0 && (
+        <div>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+            <Tag size={12} /> Entity Types
+          </h2>
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(
+              entities.reduce((acc, e) => {
+                acc[e.label] = (acc[e.label] || 0) + 1;
+                return acc;
+              }, {})
+            ).map(([label, count]) => (
+              <span
+                key={label}
+                className="px-2.5 py-1 bg-gray-50 rounded-lg border border-gray-200 text-[11px] font-medium text-gray-600"
+              >
+                {label} <span className="text-gray-400">×{count}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tip */}
+      <div className="flex items-start gap-2 px-3 py-3 bg-gray-50 rounded-2xl border border-gray-100">
+        <Lightbulb size={14} className="text-gray-300 shrink-0 mt-0.5" />
+        <p className="text-[12px] text-gray-400 leading-relaxed">
+          Click on any headline candidate to expand its detailed quality metrics.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Export ─────────────────────────────────────────────────────────────
 
 export default function RightPanel({ activeTool, settings, onSettingsChange, output, loading, input }) {
@@ -214,12 +386,36 @@ export default function RightPanel({ activeTool, settings, onSettingsChange, out
         )}
 
         {activeTool === 'headlines' && (
-          <OptionGroup
-            label="Count"
-            options={HEADLINE_COUNTS}
-            value={settings.count}
-            onChange={(v) => onSettingsChange({ ...settings, count: v })}
-          />
+          <>
+            {/* Settings section — shown when no output yet */}
+            {!output && !loading && (
+              <>
+                <OptionGroup
+                  label="Style"
+                  options={HEADLINE_STYLES}
+                  value={settings.headlineStyle}
+                  onChange={(v) => onSettingsChange({ ...settings, headlineStyle: v })}
+                />
+                <OptionGroup
+                  label="Max Length"
+                  options={MAX_LENGTHS}
+                  value={settings.headlineMaxLength}
+                  onChange={(v) => onSettingsChange({ ...settings, headlineMaxLength: v })}
+                />
+                <OptionGroup
+                  label="Count"
+                  options={HEADLINE_COUNTS}
+                  value={settings.count}
+                  onChange={(v) => onSettingsChange({ ...settings, count: v })}
+                />
+              </>
+            )}
+
+            {/* Insights panel — shown when loading or output exists */}
+            {(loading || output) && (
+              <HeadlineInsightsPanel output={output} loading={loading} />
+            )}
+          </>
         )}
       </div>
     </aside>

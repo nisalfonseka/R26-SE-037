@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import ToolHeader from './components/ToolHeader';
 import InputBox from './components/InputBox';
 import OutputPanel from './components/OutputPanel';
+import HeadlineOutputPanel from './components/HeadlineOutputPanel';
 import RightPanel from './components/RightPanel';
 import Dashboard from './components/Dashboard';
 import HistoryPage from './components/HistoryPage';
@@ -25,7 +26,7 @@ const TOOL_CONFIG = {
     description: 'Generate headline options from an article',
     placeholder: 'මෙහි ප්‍රවෘත්ති ලිපිය ඇතුළත් කරන්න…',
     actionLabel: 'Generate',
-    outputType: 'list',
+    outputType: 'headlines',
   },
   rewriter: {
     title: 'Style Rewriter',
@@ -52,7 +53,9 @@ function App() {
   const [settings, setSettings] = useState({
     tone: 'formal',
     length: 'short',
-    count: 5,
+    count: 3,
+    headlineStyle: 'formal',
+    headlineMaxLength: 80,
   });
 
   const { input, setInput, output, loading, error, process, clear } = useToolProcessor();
@@ -79,7 +82,13 @@ function App() {
         wrappedProcess((text) => checkGrammar(text));
         break;
       case 'headlines':
-        wrappedProcess((text) => generateHeadlines(text, settings.count));
+        wrappedProcess((text) =>
+          generateHeadlines(text, {
+            style: settings.headlineStyle,
+            maxLength: settings.headlineMaxLength,
+            numCandidates: settings.count,
+          })
+        );
         break;
       case 'rewriter':
         wrappedProcess((text) => rewriteStyle(text, settings.tone));
@@ -143,12 +152,21 @@ function App() {
               <span className="text-sm text-gray-300 ml-auto hidden sm:inline">⌘ Enter</span>
             </div>
 
-            <OutputPanel
-              output={output}
-              loading={loading}
-              error={error}
-              type={config.outputType}
-            />
+            {/* Use dedicated panel for headlines, generic for others */}
+            {activeTool === 'headlines' ? (
+              <HeadlineOutputPanel
+                output={output}
+                loading={loading}
+                error={error}
+              />
+            ) : (
+              <OutputPanel
+                output={output}
+                loading={loading}
+                error={error}
+                type={config.outputType}
+              />
+            )}
           </>
         );
     }
