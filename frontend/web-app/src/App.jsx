@@ -210,10 +210,16 @@ function App() {
         onCollapse={() => setSidebarCollapsed((v) => !v)}
       />
 
-      <main className="relative z-10 flex-1 flex flex-col bg-[#f8fafc] rounded-tl-[2rem] sm:rounded-tl-[3rem] my-2 mr-2 sm:my-4 sm:mr-4 shadow-2xl overflow-hidden">
+      {/* Desktop sidebar spacer — gives the fixed sidebar its flex-row space on lg+ */}
+      <div className={`
+        hidden lg:block shrink-0 transition-all duration-200
+        ${sidebarCollapsed ? 'w-20' : 'w-[20rem]'}
+      `} />
+
+      <main className="relative z-10 flex-1 flex flex-col bg-[#f8fafc] rounded-[2rem] lg:rounded-tl-[3rem] lg:rounded-tr-none lg:rounded-bl-none lg:rounded-br-none my-2 mx-2 sm:my-4 sm:mr-4 sm:ml-0 shadow-2xl overflow-hidden">
         <div className="flex-1 flex min-w-0 overflow-y-auto">
           <div className="flex-1 min-w-0 flex justify-center">
-            <div className="w-full max-w-4xl px-4 py-6 sm:px-8 sm:py-8">
+            <div className="w-full max-w-4xl px-4 pt-16 pb-6 lg:pt-8 sm:px-8 sm:py-8">
               {renderContent()}
             </div>
           </div>

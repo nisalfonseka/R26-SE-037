@@ -14,8 +14,26 @@ export default function OutputPanel({ output, loading, error, type }) {
 
   if (loading) {
     return (
-      <div id="output-loading" className="mt-6 py-12 flex items-center justify-center">
-        <span className="text-base text-gray-400 animate-pulse">Processing…</span>
+      <div id="output-loading" className="mt-6">
+        {/* Shimmer skeleton — mirrors the real output panel */}
+        <div className="flex items-center justify-between mb-2.5">
+          <span className="text-xs font-semibold text-gray-300 uppercase tracking-widest">Output</span>
+        </div>
+        <div className="px-5 py-4 bg-gray-50 rounded-xl border border-gray-100 space-y-3">
+          {/* 4 full lines */}
+          {[100, 92, 97, 88].map((w, i) => (
+            <div
+              key={i}
+              className="h-4 rounded-md bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-shimmer"
+              style={{ width: `${w}%`, backgroundSize: '200% 100%' }}
+            />
+          ))}
+          {/* half line */}
+          <div
+            className="h-4 rounded-md bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-shimmer"
+            style={{ width: '45%', backgroundSize: '200% 100%' }}
+          />
+        </div>
       </div>
     );
   }

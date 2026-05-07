@@ -88,10 +88,10 @@ export default function Sidebar({ activeTool, onSelectTool, isOpen, onToggle, co
 
       <aside
         className={`
-          fixed lg:static inset-y-0 left-0 z-40 relative overflow-hidden
+          fixed inset-y-0 left-0 z-40 overflow-hidden
           ${collapsed ? 'w-20' : 'w-[20rem]'} bg-[#cd191a]
           flex flex-col shrink-0
-          transition-all duration-200 ease-in-out
+          transition-transform duration-200 ease-in-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
