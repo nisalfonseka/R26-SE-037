@@ -107,11 +107,11 @@ function App() {
       case 'dashboard':
         return <Dashboard onSelectTool={handleSelectTool} />;
       case 'history':
-        return <HistoryPage onSelectTool={handleSelectTool} />;
+        return <HistoryPage onSelectTool={handleSelectTool} onBack={() => handleSelectTool('dashboard')} />;
       case 'settings':
-        return <SettingsPage />;
+        return <SettingsPage onBack={() => handleSelectTool('dashboard')} />;
       case 'profile':
-        return <ProfilePage />;
+        return <ProfilePage onBack={() => handleSelectTool('dashboard')} />;
       default:
         if (!config) return null;
         return (

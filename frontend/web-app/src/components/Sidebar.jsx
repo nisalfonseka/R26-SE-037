@@ -96,30 +96,30 @@ export default function Sidebar({ activeTool, onSelectTool, isOpen, onToggle, co
         `}
       >
         <DotField
-          className="absolute inset-0 z-0 opacity-35"
+          className="absolute inset-0 z-0 opacity-40"
           dotRadius={1.5}
-          dotSpacing={15}
+          dotSpacing={19}
           bulgeStrength={14}
-          glowRadius={160}
+          glowRadius={6}
           sparkle={false}
           waveAmplitude={0}
           cursorRadius={500}
-          cursorForce={0.08}
+          cursorForce={0.02}
           bulgeOnly
           gradientFrom="#ffffff"
           gradientTo="#950a1f"
-          glowColor="#120F17"
+          glowColor="#cd191a"
         />
 
         {/* Logo */}
-        <div className={`relative z-10 pt-8 pb-6 flex items-center gap-3 ${collapsed ? 'justify-center px-2' : 'px-8'}`}>
-          <div className="flex items-center gap-1.5 min-w-0">
+        <div className={`relative z-10 pt-8 pb-6 flex items-center gap-3 ${collapsed ? 'justify-center px-2' : 'px-10'}`}>
+          <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 relative overflow-hidden transition-colors duration-500">
                <img src="/logo.png" alt="SinAi logo" className="w-full h-full object-contain p-1" />
             </div>
             {!collapsed && (
               <div className="flex flex-col">
-                <span className="font-bold text-[19px] text-white tracking-tight leading-none drop-shadow-sm">SinAi</span>
+                <span className="font-bold text-[34px] text-white tracking-tight leading-none drop-shadow-sm">SinAi</span>
               </div>
             )}
           </div>
