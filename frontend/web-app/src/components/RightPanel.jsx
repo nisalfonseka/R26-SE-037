@@ -362,11 +362,11 @@ export default function RightPanel({ activeTool, settings, onSettingsChange, out
 
   const getThemeColor = () => {
     switch (activeTool) {
-      case 'grammar': return 'bg-red-500';
-      case 'rewriter': return 'bg-purple-500';
-      case 'summarizer': return 'bg-cyan-500';
-      case 'headlines': return 'bg-orange-500';
-      default: return 'bg-blue-500';
+      case 'grammar': return 'bg-[#cd191a]';
+      case 'rewriter': return 'bg-[#cd191a]';
+      case 'summarizer': return 'bg-[#cd191a]';
+      case 'headlines': return 'bg-[#cd191a]';
+      default: return 'bg-[#cd191a]';
     }
   };
 

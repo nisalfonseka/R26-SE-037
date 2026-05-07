@@ -17,10 +17,12 @@ const BOTTOM_NAV = [
   { id: 'settings', label: 'Settings', icon: Settings, color: 'text-green-500' },
 ];
 
+const SIDEBAR_ACCENT = '#cd191a';
+
 export default function Sidebar({ activeTool, onSelectTool, isOpen, onToggle, collapsed, onCollapse }) {
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const renderNavItem = ({ id, label, icon: Icon, color }) => {
+  const renderNavItem = ({ id, label, icon: Icon }) => {
     const isActive = activeTool === id;
     return (
       <div key={id} className={`relative flex items-center w-full ${isActive ? 'z-20' : 'z-10'}`}>
@@ -32,27 +34,32 @@ export default function Sidebar({ activeTool, onSelectTool, isOpen, onToggle, co
           }}
           title={collapsed ? label : undefined}
           className={`
-            w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-4
+            group w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-4
             ${collapsed ? 'pl-0 py-3' : 'pl-6 py-3'}
-            text-[15px] font-bold transition-all duration-300 cursor-pointer
+            text-[15px] font-medium transition-all duration-300 cursor-pointer
             ${isActive
-              ? 'bg-[#f8fafc] text-gray-800 rounded-l-[1.5rem] shadow-[-5px_0_15px_rgba(0,0,0,0.05)] translate-x-4'
-              : 'text-white hover:bg-white/10'
+              ? 'bg-white text-black rounded-l-[1.5rem] translate-x-4'
+              : 'text-white hover:bg-black/10 hover:text-black hover:rounded-l-[1.5rem] hover:translate-x-4 hover:mr-[-1rem]'
             }
           `}
           style={{
             marginRight: isActive ? '-1rem' : '1rem',
             paddingRight: isActive ? '1rem' : '1rem',
             marginLeft: isActive ? '1rem' : '1rem',
-            borderRadius: isActive ? '1.5rem 0 0 1.5rem' : '0.75rem',
+            borderRadius: isActive ? '2.5rem 0 0 2.5rem' : '0.75rem',
+            minHeight: '34px',
           }}
         >
           {/* Icon Circle */}
           <div className={`
             w-9 h-9 rounded-full flex items-center justify-center shrink-0
-            ${isActive ? 'bg-white shadow-sm' : 'bg-white/20'}
+            ${isActive ? 'bg-white/20' : 'bg-white/20'}
           `}>
-            <Icon size={18} strokeWidth={2.5} className={isActive ? color : 'text-white'} />
+            <Icon
+              size={18}
+              strokeWidth={2.5}
+              className="text-white"
+            />
           </div>
           {!collapsed && <span className="tracking-wide">{label}</span>}
         </button>
@@ -90,15 +97,15 @@ export default function Sidebar({ activeTool, onSelectTool, isOpen, onToggle, co
 
       <aside
         className={`
-          fixed lg:static inset-y-0 left-0 z-40
-          ${collapsed ? 'w-20' : 'w-[17rem]'} bg-transparent
+          fixed lg:static inset-y-0 left-0 z-40 relative overflow-hidden
+          ${collapsed ? 'w-20' : 'w-[20rem]'} bg-[#cd191a]
           flex flex-col shrink-0
           transition-all duration-200 ease-in-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Logo */}
-        <div className={`pt-8 pb-6 flex items-center gap-3 ${collapsed ? 'justify-center px-2' : 'px-8'}`}>
+        <div className={`relative z-10 pt-8 pb-6 flex items-center gap-3 ${collapsed ? 'justify-center px-2' : 'px-8'}`}>
           <div className="flex items-center gap-1.5 min-w-0">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shrink-0 shadow-lg relative overflow-hidden transition-colors duration-500">
                <span className={`${getLogoColor()} font-black text-2xl transition-colors duration-500`}>S</span>
@@ -106,7 +113,6 @@ export default function Sidebar({ activeTool, onSelectTool, isOpen, onToggle, co
             {!collapsed && (
               <div className="flex flex-col">
                 <span className="font-bold text-[19px] text-white tracking-tight leading-none drop-shadow-sm">SinAi</span>
-                <span className="text-[11px] text-white/80 font-medium">Assistant</span>
               </div>
             )}
           </div>
@@ -122,17 +128,17 @@ export default function Sidebar({ activeTool, onSelectTool, isOpen, onToggle, co
         </div>
 
         {/* Main navigation */}
-        <nav className={`flex-1 py-4 space-y-1`}>
+        <nav className={`relative z-10 flex-1 py-4 space-y-5`}>
           {MAIN_NAV.map(renderNavItem)}
         </nav>
 
         {/* Bottom section */}
-        <div className={`py-4 space-y-1`}>
+        <div className={`relative z-10 py-4 space-y-2`}>
           {BOTTOM_NAV.map(renderNavItem)}
         </div>
 
         {/* User profile */}
-        <div className={`relative px-4 pb-6 pt-2`}>
+        <div className={`relative z-10 px-4 pb-6 pt-2`}>
           <button
             id="user-profile-btn"
             onClick={() => setProfileOpen((v) => !v)}

@@ -173,35 +173,34 @@ function App() {
   };
 
   const getBgColor = () => {
-    switch (activeTool) {
-      case 'dashboard': return 'bg-[#0ea5e9]'; // blue
-      case 'grammar': return 'bg-[#ef4444]'; // red
-      case 'headlines': return 'bg-[#f97316]'; // orange
-      case 'rewriter': return 'bg-[#8b5cf6]'; // purple
-      case 'summarizer': return 'bg-[#06b6d4]'; // cyan
-      case 'history': return 'bg-[#f43f5e]'; // rose
-      case 'settings': return 'bg-[#10b981]'; // green
-      case 'profile': return 'bg-[#64748b]'; // slate
-      default: return 'bg-[#0ea5e9]';
-    }
+    return 'bg-[#cd191a]';
   };
 
   const getButtonColor = (tool) => {
     switch (tool) {
-      case 'dashboard': return 'bg-[#0ea5e9] hover:bg-[#0284c7]';
-      case 'grammar': return 'bg-[#ef4444] hover:bg-[#dc2626]';
-      case 'headlines': return 'bg-[#f97316] hover:bg-[#ea580c]';
-      case 'rewriter': return 'bg-[#8b5cf6] hover:bg-[#7c3aed]';
-      case 'summarizer': return 'bg-[#06b6d4] hover:bg-[#0891b2]';
-      case 'history': return 'bg-[#f43f5e] hover:bg-[#e11d48]';
-      case 'settings': return 'bg-[#10b981] hover:bg-[#059669]';
-      case 'profile': return 'bg-[#64748b] hover:bg-[#475569]';
-      default: return 'bg-[#0ea5e9] hover:bg-[#0284c7]';
+      case 'dashboard': return 'bg-[#cd191a] hover:bg-[#cd191a]';
+      case 'grammar': return 'bg-[#cd191a] hover:bg-[#cd191a]';
+      case 'headlines': return 'bg-[#cd191a] hover:bg-[#cd191a]';
+      case 'rewriter': return 'bg-[#cd191a] hover:bg-[#cd191a]';
+      case 'summarizer': return 'bg-[#cd191a] hover:bg-[#cd191a]';
+      case 'history': return 'bg-[#cd191a] hover:bg-[#cd191a]';
+      case 'settings': return 'bg-[#cd191a] hover:bg-[#cd191a]';
+      case 'profile': return 'bg-[#cd191a] hover:bg-[#cd191a]';
+      default: return 'bg-[#cd191a] hover:bg-[#cd191a]';
     }
   };
 
   return (
-    <div className={`h-full flex ${getBgColor()} pattern-bg transition-colors duration-500`}>
+    <div className={`relative h-full flex ${getBgColor()} transition-colors duration-500 overflow-hidden`}>
+      <div
+        className="pointer-events-none absolute inset-0 z-0 bg-center bg-repeat"
+        style={{
+          backgroundImage: "url('/t.svg')",
+          backgroundSize: '2840px auto',
+          opacity: 0.18,
+        }}
+      />
+
       <Sidebar
         activeTool={activeTool}
         onSelectTool={handleSelectTool}
@@ -211,7 +210,7 @@ function App() {
         onCollapse={() => setSidebarCollapsed((v) => !v)}
       />
 
-      <main className="flex-1 flex flex-col bg-[#f8fafc] rounded-tl-[2rem] sm:rounded-tl-[3rem] my-2 mr-2 sm:my-4 sm:mr-4 shadow-2xl relative overflow-hidden">
+      <main className="relative z-10 flex-1 flex flex-col bg-[#f8fafc] rounded-tl-[2rem] sm:rounded-tl-[3rem] my-2 mr-2 sm:my-4 sm:mr-4 shadow-2xl overflow-hidden">
         <div className="flex-1 flex min-w-0 overflow-y-auto">
           <div className="flex-1 min-w-0 flex justify-center">
             <div className="w-full max-w-4xl px-4 py-6 sm:px-8 sm:py-8">
