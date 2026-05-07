@@ -8,12 +8,12 @@ export default function InputBox({ value, onChange, placeholder, onSubmit, disab
 
   const getBorderColor = () => {
     switch (activeTool) {
-      case 'dashboard': return 'border-[#0ea5e9]';
-      case 'grammar': return 'border-[#ef4444]';
-      case 'headlines': return 'border-[#f97316]';
-      case 'rewriter': return 'border-[#8b5cf6]';
-      case 'summarizer': return 'border-[#06b6d4]';
-      default: return 'border-[#0ea5e9]';
+      case 'dashboard': return 'border-[#cd191a]';
+      case 'grammar': return 'border-[#cd191a]';
+      case 'headlines': return 'border-[#cd191a]';
+      case 'rewriter': return 'border-[#cd191a]';
+      case 'summarizer': return 'border-[#cd191a]';
+      default: return 'border-[#cd191a]';
     }
   };
 
