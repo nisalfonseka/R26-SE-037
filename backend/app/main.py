@@ -14,6 +14,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.core.database import init_db, close_db
+
+# Import all ORM models so SQLAlchemy metadata is populated before init_db()
+import app.models  # noqa: F401  (side-effect import)
+
 from app.api.v1 import router as v1_router
 
 
@@ -35,10 +39,14 @@ app = FastAPI(
 )
 
 # ── CORS ──
+# In development use wildcard so any localhost port works (Vite, Storybook, etc.)
+# In production, lock down to the explicit origin list in .env
+_cors_origins = ["*"] if settings.is_development else settings.cors_origin_list
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origin_list,
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=False,   # must be False when allow_origins=["*"]
     allow_methods=["*"],
     allow_headers=["*"],
 )

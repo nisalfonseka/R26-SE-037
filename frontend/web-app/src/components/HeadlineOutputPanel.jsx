@@ -76,8 +76,8 @@ function CandidateCard({ candidate, index, isExpanded, onToggle, onCopy }) {
           </p>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
             <Badge passed={candidate.passed_validation} label={candidate.passed_validation ? 'Passed' : 'Failed'} />
-            <Badge passed={m.grammar_pass} label="Grammar" />
-            <Badge passed={m.length_ok} label="Length" />
+            {m?.grammar_pass != null && <Badge passed={m.grammar_pass} label="Grammar" />}
+            {m?.length_ok != null && <Badge passed={m.length_ok} label="Length" />}
           </div>
         </div>
 
