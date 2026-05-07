@@ -8,6 +8,8 @@ import {
 const TONES = [
   { id: 'formal',    label: 'Formal'    },
   { id: 'editorial', label: 'Editorial' },
+  { id: 'sports',    label: 'Sports'    },
+  { id: 'feature',   label: 'Feature'   },
   { id: 'youth',     label: 'Youth'     },
 ];
 
