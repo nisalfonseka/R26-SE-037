@@ -3,6 +3,7 @@ import {
   LayoutDashboard, SpellCheck, Newspaper, PenLine, FileText,
   Menu, X, History, Settings, ChevronLeft, ChevronRight, User, LogOut
 } from 'lucide-react';
+import DotField from './DotField';
 
 const MAIN_NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-blue-500' },
@@ -39,7 +40,7 @@ export default function Sidebar({ activeTool, onSelectTool, isOpen, onToggle, co
             text-[15px] font-medium transition-all duration-300 cursor-pointer
             ${isActive
               ? 'bg-white text-black rounded-l-[1.5rem] translate-x-4'
-              : 'text-white hover:bg-black/10 hover:text-black hover:rounded-l-[1.5rem] hover:translate-x-4 hover:mr-[-1rem]'
+              : 'text-white hover:bg-black/10 hover:text-white hover:rounded-l-[1.5rem] hover:translate-x-4 hover:mr-[-1rem]'
             }
           `}
           style={{
@@ -53,28 +54,18 @@ export default function Sidebar({ activeTool, onSelectTool, isOpen, onToggle, co
           {/* Icon Circle */}
           <div className={`
             w-9 h-9 rounded-full flex items-center justify-center shrink-0
-            ${isActive ? 'bg-white/20' : 'bg-white/20'}
+            ${isActive ? 'bg-white/0' : 'bg-white/0'}
           `}>
             <Icon
               size={18}
               strokeWidth={2.5}
-              className="text-white"
+              className={isActive ? 'text-black' : 'text-white'}
             />
           </div>
           {!collapsed && <span className="tracking-wide">{label}</span>}
         </button>
       </div>
     );
-  };
-
-  const getLogoColor = () => {
-    switch (activeTool) {
-      case 'grammar': return 'text-red-500';
-      case 'headlines': return 'text-orange-500';
-      case 'rewriter': return 'text-purple-500';
-      case 'summarizer': return 'text-cyan-500';
-      default: return 'text-blue-500';
-    }
   };
 
   return (
@@ -104,11 +95,27 @@ export default function Sidebar({ activeTool, onSelectTool, isOpen, onToggle, co
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
+        <DotField
+          className="absolute inset-0 z-0 opacity-35"
+          dotRadius={1.5}
+          dotSpacing={15}
+          bulgeStrength={14}
+          glowRadius={160}
+          sparkle={false}
+          waveAmplitude={0}
+          cursorRadius={500}
+          cursorForce={0.08}
+          bulgeOnly
+          gradientFrom="#ffffff"
+          gradientTo="#950a1f"
+          glowColor="#120F17"
+        />
+
         {/* Logo */}
         <div className={`relative z-10 pt-8 pb-6 flex items-center gap-3 ${collapsed ? 'justify-center px-2' : 'px-8'}`}>
           <div className="flex items-center gap-1.5 min-w-0">
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shrink-0 shadow-lg relative overflow-hidden transition-colors duration-500">
-               <span className={`${getLogoColor()} font-black text-2xl transition-colors duration-500`}>S</span>
+            <div className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 relative overflow-hidden transition-colors duration-500">
+               <img src="/logo.png" alt="SinAi logo" className="w-full h-full object-contain p-1" />
             </div>
             {!collapsed && (
               <div className="flex flex-col">
