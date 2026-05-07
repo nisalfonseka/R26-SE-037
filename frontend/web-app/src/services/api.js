@@ -33,8 +33,17 @@ export function getGrammarHistory(page = 1, pageSize = 20) {
   return request(`/grammar/history?page=${page}&page_size=${pageSize}`, null, 'GET');
 }
 
-export function generateHeadlines(text, count = 5) {
-  return request('/headlines/generate', { text, count });
+export function generateHeadlines(text, { style = 'formal', maxLength = 80, numCandidates = 3 } = {}) {
+  return request('/headline/generate', {
+    article_text: text,
+    style,
+    max_length: maxLength,
+    num_candidates: numCandidates,
+  });
+}
+
+export function getHeadlineHistory(page = 1, pageSize = 20) {
+  return request(`/headline/history?page=${page}&page_size=${pageSize}`, null, 'GET');
 }
 
 export function rewriteStyle(text, tone) {
