@@ -144,20 +144,29 @@ export default function HeadlineOutputPanel({ output, loading, error }) {
 
   if (loading) {
     return (
-      <div id="headline-loading" className="mt-6 py-12 flex flex-col items-center justify-center gap-3">
-        <div className="flex gap-1">
-          {[0,1,2].map(i => (
-            <div
-              key={i}
-              className="w-2 h-2 bg-accent rounded-full animate-bounce"
-              style={{ animationDelay: `${i * 150}ms` }}
-            />
-          ))}
+      <div id="headline-loading" className="mt-6">
+        <div className="flex items-center justify-between mb-2.5">
+          <span className="text-xs font-semibold text-gray-300 uppercase tracking-widest">Generated Headlines</span>
         </div>
-        <span className="text-base text-gray-400">Generating headlines…</span>
-        <p className="text-xs text-gray-300 max-w-xs text-center">
-          Running preprocessing, entity extraction, generation, optimization, and validation pipeline
-        </p>
+        {/* Best headline placeholder */}
+        <div className="px-5 py-4 bg-gradient-to-r from-gray-50 to-gray-50 rounded-xl border border-gray-100 space-y-3 mb-4">
+          <div className="h-3 w-24 rounded-md animate-shimmer mb-2" />
+          <div className="h-5 rounded-md animate-shimmer" style={{ width: '85%' }} />
+        </div>
+        {/* Candidate card placeholders */}
+        {[1, 2, 3].map(i => (
+          <div key={i} className="rounded-xl border border-gray-100 bg-white px-4 py-3.5 mb-2.5 space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="w-7 h-7 rounded-lg animate-shimmer shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 rounded-md animate-shimmer" style={{ width: `${88 - i * 8}%` }} />
+                <div className="h-3 w-16 rounded-full animate-shimmer" />
+              </div>
+            </div>
+          </div>
+        ))}
+        {/* Bottom half line */}
+        <div className="h-4 rounded-md animate-shimmer mt-1" style={{ width: '45%' }} />
       </div>
     );
   }
