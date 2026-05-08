@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     # ── OpenRouter ──
     OPENROUTER_API_KEY: str
-    OPENROUTER_MODEL: str = "google/gemini-2.0-flash-001"
+    OPENROUTER_MODEL: str = "meta-llama/llama-3.2-3b-instruct:free"
 
     @property
     def cors_origin_list(self) -> list[str]:

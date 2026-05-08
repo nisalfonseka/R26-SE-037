@@ -10,6 +10,7 @@ import HistoryPage from './components/HistoryPage';
 import SettingsPage from './components/SettingsPage';
 import ProfilePage from './components/ProfilePage';
 import Plans from './components/Plans';
+import SinLLamaPage from './components/SinLLamaPage';
 import { useToolProcessor } from './hooks/useToolProcessor';
 import { checkGrammar, generateHeadlines, rewriteStyle, summarizeNews } from './services/api';
 import { saveToHistory } from './components/HistoryPage';
@@ -45,7 +46,7 @@ const TOOL_CONFIG = {
   },
 };
 
-const TOOL_IDS = ['grammar', 'headlines', 'rewriter', 'summarizer', 'plans'];
+const TOOL_IDS = ['grammar', 'headlines', 'rewriter', 'summarizer', 'plans', 'sinllama'];
 
 function App() {
   const [activeTool, setActiveTool] = useState('dashboard');
@@ -115,6 +116,8 @@ function App() {
         return <ProfilePage onBack={() => handleSelectTool('dashboard')} />;
       case 'plans':
         return <Plans />;
+      case 'sinllama':
+        return <SinLLamaPage />;
       default:
         if (!config) return null;
         return (
