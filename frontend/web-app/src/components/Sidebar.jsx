@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   LayoutDashboard, SpellCheck, Newspaper, PenLine, FileText,
-  Menu, X, History, Settings, ChevronLeft, ChevronRight, User, LogOut, Zap
+  Menu, X, History, Settings, ChevronLeft, ChevronRight, User, LogOut, Zap, Bot
 } from 'lucide-react';
 import DotField from './DotField';
 
@@ -11,6 +11,7 @@ const MAIN_NAV = [
   { id: 'headlines', label: 'Headline Generator', icon: Newspaper, color: 'text-orange-500' },
   { id: 'rewriter', label: 'Style Rewriter', icon: PenLine, color: 'text-purple-500' },
   { id: 'summarizer', label: 'News Summarizer', icon: FileText, color: 'text-cyan-500' },
+  { id: 'sinllama',   label: 'SinLLaMA Playground', icon: Bot, color: 'text-emerald-500' },
 ];
 
 const BOTTOM_NAV = [
