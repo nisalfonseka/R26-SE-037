@@ -9,6 +9,7 @@ import Dashboard from './components/Dashboard';
 import HistoryPage from './components/HistoryPage';
 import SettingsPage from './components/SettingsPage';
 import ProfilePage from './components/ProfilePage';
+import Plans from './components/Plans';
 import { useToolProcessor } from './hooks/useToolProcessor';
 import { checkGrammar, generateHeadlines, rewriteStyle, summarizeNews } from './services/api';
 import { saveToHistory } from './components/HistoryPage';
@@ -44,7 +45,7 @@ const TOOL_CONFIG = {
   },
 };
 
-const TOOL_IDS = ['grammar', 'headlines', 'rewriter', 'summarizer'];
+const TOOL_IDS = ['grammar', 'headlines', 'rewriter', 'summarizer', 'plans'];
 
 function App() {
   const [activeTool, setActiveTool] = useState('dashboard');
@@ -112,6 +113,8 @@ function App() {
         return <SettingsPage onBack={() => handleSelectTool('dashboard')} />;
       case 'profile':
         return <ProfilePage onBack={() => handleSelectTool('dashboard')} />;
+      case 'plans':
+        return <Plans />;
       default:
         if (!config) return null;
         return (
@@ -186,6 +189,7 @@ function App() {
       case 'history': return 'bg-[#cd191a] hover:bg-[#cd191a]';
       case 'settings': return 'bg-[#cd191a] hover:bg-[#cd191a]';
       case 'profile': return 'bg-[#cd191a] hover:bg-[#cd191a]';
+      case 'plans': return 'bg-[#cd191a] hover:bg-[#cd191a]';
       default: return 'bg-[#cd191a] hover:bg-[#cd191a]';
     }
   };

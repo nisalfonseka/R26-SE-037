@@ -311,6 +311,10 @@ export default function HeadlineOutputPanel({ output, loading, error }) {
           )}
         </div>
       )}
+
+      <p className="text-center text-[11px] font-light text-gray-400 mt-4">
+        Sin Ai can make mistakes. Please double-check responses.
+      </p>
     </div>
   );
 }
