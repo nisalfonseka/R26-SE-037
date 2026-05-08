@@ -9,6 +9,7 @@ import Dashboard from './components/Dashboard';
 import HistoryPage from './components/HistoryPage';
 import SettingsPage from './components/SettingsPage';
 import ProfilePage from './components/ProfilePage';
+import Plans from './components/Plans';
 import { useToolProcessor } from './hooks/useToolProcessor';
 import { checkGrammar, generateHeadlines, rewriteStyle, summarizeNews } from './services/api';
 import { saveToHistory } from './components/HistoryPage';
@@ -44,7 +45,7 @@ const TOOL_CONFIG = {
   },
 };
 
-const TOOL_IDS = ['grammar', 'headlines', 'rewriter', 'summarizer'];
+const TOOL_IDS = ['grammar', 'headlines', 'rewriter', 'summarizer', 'plans'];
 
 function App() {
   const [activeTool, setActiveTool] = useState('dashboard');
@@ -107,11 +108,13 @@ function App() {
       case 'dashboard':
         return <Dashboard onSelectTool={handleSelectTool} />;
       case 'history':
-        return <HistoryPage onSelectTool={handleSelectTool} />;
+        return <HistoryPage onSelectTool={handleSelectTool} onBack={() => handleSelectTool('dashboard')} />;
       case 'settings':
-        return <SettingsPage />;
+        return <SettingsPage onBack={() => handleSelectTool('dashboard')} />;
       case 'profile':
-        return <ProfilePage />;
+        return <ProfilePage onBack={() => handleSelectTool('dashboard')} />;
+      case 'plans':
+        return <Plans />;
       default:
         if (!config) return null;
         return (
@@ -186,6 +189,7 @@ function App() {
       case 'history': return 'bg-[#cd191a] hover:bg-[#cd191a]';
       case 'settings': return 'bg-[#cd191a] hover:bg-[#cd191a]';
       case 'profile': return 'bg-[#cd191a] hover:bg-[#cd191a]';
+      case 'plans': return 'bg-[#cd191a] hover:bg-[#cd191a]';
       default: return 'bg-[#cd191a] hover:bg-[#cd191a]';
     }
   };
@@ -210,10 +214,16 @@ function App() {
         onCollapse={() => setSidebarCollapsed((v) => !v)}
       />
 
-      <main className="relative z-10 flex-1 flex flex-col bg-[#f8fafc] rounded-tl-[2rem] sm:rounded-tl-[3rem] my-2 mr-2 sm:my-4 sm:mr-4 shadow-2xl overflow-hidden">
+      {/* Desktop sidebar spacer — gives the fixed sidebar its flex-row space on lg+ */}
+      <div className={`
+        hidden lg:block shrink-0 transition-all duration-200
+        ${sidebarCollapsed ? 'w-20' : 'w-[20rem]'}
+      `} />
+
+      <main className="relative z-10 flex-1 flex flex-col bg-[#f8fafc] rounded-[2rem] lg:rounded-tl-[3rem] lg:rounded-tr-none lg:rounded-bl-none lg:rounded-br-none my-2 mx-2 sm:my-4 sm:mr-4 sm:ml-0 shadow-2xl overflow-hidden">
         <div className="flex-1 flex min-w-0 overflow-y-auto">
           <div className="flex-1 min-w-0 flex justify-center">
-            <div className="w-full max-w-4xl px-4 py-6 sm:px-8 sm:py-8">
+            <div className="w-full max-w-4xl px-4 pt-16 pb-6 lg:pt-8 sm:px-8 sm:py-8">
               {renderContent()}
             </div>
           </div>

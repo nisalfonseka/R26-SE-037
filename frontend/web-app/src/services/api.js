@@ -1,17 +1,17 @@
 /**
- * Frontend API service.
- * All backend calls go through this module.
+ * Frontend API service — all backend calls go through this module.
+ * Base URL defaults to the local FastAPI server on port 8000.
  */
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
-async function request(endpoint, body, method = 'POST') {
+async function request(endpoint, body = null, method = 'POST') {
   const options = {
     method,
     headers: { 'Content-Type': 'application/json' },
   };
 
-  if (body && method !== 'GET') {
+  if (body !== null && method !== 'GET') {
     options.body = JSON.stringify(body);
   }
 
@@ -25,6 +25,7 @@ async function request(endpoint, body, method = 'POST') {
   return res.json();
 }
 
+// ── Grammar ──
 export function checkGrammar(text) {
   return request('/grammar/check', { text });
 }
@@ -33,12 +34,20 @@ export function getGrammarHistory(page = 1, pageSize = 20) {
   return request(`/grammar/history?page=${page}&page_size=${pageSize}`, null, 'GET');
 }
 
-export function generateHeadlines(text, { style = 'formal', maxLength = 80, numCandidates = 3 } = {}) {
+// ── Headlines ──
+export function generateHeadlines(text, options = {}) {
+  const {
+    count = 5,
+    style = 'formal',
+    maxLength = 80,
+    numCandidates,
+  } = typeof options === 'object' && !Array.isArray(options) ? options : { count: options };
+
   return request('/headline/generate', {
     article_text: text,
+    num_candidates: numCandidates ?? count,
     style,
     max_length: maxLength,
-    num_candidates: numCandidates,
   });
 }
 
@@ -46,10 +55,20 @@ export function getHeadlineHistory(page = 1, pageSize = 20) {
   return request(`/headline/history?page=${page}&page_size=${pageSize}`, null, 'GET');
 }
 
-export function rewriteStyle(text, tone) {
-  return request('/rewrite', { text, tone });
+// ── Style Rewriter ──
+export function rewriteStyle(text, tone = 'formal') {
+  return request('/style/rewrite', { text, tone });
 }
 
-export function summarizeNews(text, length) {
-  return request('/summarize', { text, length });
+export function getStyleHistory(page = 1, pageSize = 20) {
+  return request(`/style/history?page=${page}&page_size=${pageSize}`, null, 'GET');
+}
+
+// ── Summarizer ──
+export function summarizeNews(text, length = 'medium') {
+  return request('/summarize/check', { text, length });
+}
+
+export function getSummarizeHistory(page = 1, pageSize = 20) {
+  return request(`/summarize/history?page=${page}&page_size=${pageSize}`, null, 'GET');
 }
