@@ -55,6 +55,10 @@ export function getHeadlineHistory(page = 1, pageSize = 20) {
   return request(`/headline/history?page=${page}&page_size=${pageSize}`, null, 'GET');
 }
 
+export function generateImage(prompt, headline = '') {
+  return request('/headline/generate-image', { prompt, headline });
+}
+
 // ── Style Rewriter ──
 export function rewriteStyle(text, tone = 'formal') {
   return request('/style/rewrite', { text, tone });

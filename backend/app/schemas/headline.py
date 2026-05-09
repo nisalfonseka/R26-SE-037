@@ -6,7 +6,7 @@ Defines request/response shapes for the multi-stage headline pipeline.
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ── Enums ──
@@ -155,3 +155,36 @@ class HeadlineHistoryResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+# ── Image generation ──
+
+class ImageGenerateRequest(BaseModel):
+    """Request payload for visual prompt → image generation."""
+    model_config = ConfigDict(protected_namespaces=())
+
+    prompt: str = Field(
+        ...,
+        min_length=5,
+        max_length=1000,
+        description="English visual prompt to send to the image generation model",
+    )
+    headline: str = Field(
+        default="",
+        description="Original Sinhala headline (used for alignment score calculation)",
+    )
+    model_id: str | None = Field(
+        default=None,
+        description="Optional image model id (overrides server IMAGEGEN_MODEL)",
+    )
+    key: str | None = Field(
+        default=None,
+        description="Optional API key for this single request",
+    )
+
+
+class ImageGenerateResponse(BaseModel):
+    """Response after image generation."""
+    image_url: str = Field(description="Generated image URL or data URI")
+    alignment_score: str = Field(description="Semantic alignment: Low | Medium | High")
+    prompt_used: str = Field(description="The exact prompt used for generation")

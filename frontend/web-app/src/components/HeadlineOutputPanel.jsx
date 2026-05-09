@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, Trophy, AlertTriangle,
-  CheckCircle2, XCircle, Sparkles, Tag, Eye, BarChart3
+  CheckCircle2, XCircle, Sparkles, Tag, Eye, BarChart3,
+  Camera, RefreshCw, Loader2, ImageOff, Edit3,
 } from 'lucide-react';
+import { generateImage } from '../services/api';
 
 /* ── Metric bar ─────────────────────────────────────────────────── */
 function MetricBar({ label, value, threshold, suffix = '' }) {
@@ -28,7 +30,7 @@ function MetricBar({ label, value, threshold, suffix = '' }) {
   );
 }
 
-/* ── Badge ──────────────────────────────────────────────────────── */
+/* ── Validation badge ───────────────────────────────────────────── */
 function Badge({ passed, label }) {
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold
@@ -39,8 +41,24 @@ function Badge({ passed, label }) {
   );
 }
 
+/* ── Alignment score badge ──────────────────────────────────────── */
+function AlignmentBadge({ score }) {
+  const styles = {
+    High:   { wrap: 'bg-emerald-50 text-emerald-600 border-emerald-100', dot: 'bg-emerald-400' },
+    Medium: { wrap: 'bg-amber-50 text-amber-600 border-amber-100',       dot: 'bg-amber-400'   },
+    Low:    { wrap: 'bg-rose-50 text-rose-600 border-rose-100',          dot: 'bg-rose-400'    },
+  };
+  const s = styles[score] || styles.Low;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${s.wrap}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+      {score}
+    </span>
+  );
+}
+
 /* ── Single candidate card ──────────────────────────────────────── */
-function CandidateCard({ candidate, index, isExpanded, onToggle, onCopy }) {
+function CandidateCard({ candidate, isExpanded, onToggle }) {
   const [copied, setCopied] = useState(false);
   const m = candidate.metrics;
   const isBest = candidate.rank === 1;
@@ -58,12 +76,10 @@ function CandidateCard({ candidate, index, isExpanded, onToggle, onCopy }) {
         ? 'border-emerald-200 bg-gradient-to-br from-emerald-50/50 to-white shadow-sm'
         : 'border-gray-200 bg-white hover:border-gray-300'
     }`}>
-      {/* Header */}
       <button
         onClick={onToggle}
         className="w-full flex items-start gap-3 px-4 py-3.5 text-left cursor-pointer"
       >
-        {/* Rank badge */}
         <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 text-[12px] font-bold ${
           isBest ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-400'
         }`}>
@@ -93,9 +109,8 @@ function CandidateCard({ candidate, index, isExpanded, onToggle, onCopy }) {
         </div>
       </button>
 
-      {/* Expanded metrics */}
       {isExpanded && (
-        <div className="px-4 pb-4 pt-0 border-t border-gray-100 mt-0">
+        <div className="px-4 pb-4 pt-0 border-t border-gray-100">
           <div className="pt-3 space-y-3">
             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
               <BarChart3 size={12} /> Quality Metrics
@@ -136,6 +151,152 @@ function EntityTag({ entity }) {
   );
 }
 
+/* ── Visual Prompt Generation Module ───────────────────────────── */
+function VisualPromptModule({ initialPrompt, headline }) {
+  const [open, setOpen] = useState(true);
+  const [prompt, setPrompt] = useState(initialPrompt || '');
+  const [imageUrl, setImageUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [alignmentScore, setAlignmentScore] = useState(null);
+
+  useEffect(() => {
+    setPrompt(initialPrompt || '');
+    setImageUrl(null);
+    setError(null);
+    setAlignmentScore(null);
+  }, [initialPrompt]);
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await generateImage(prompt.trim(), headline || '');
+      setImageUrl(result.image_url);
+      setAlignmentScore(result.alignment_score);
+    } catch (err) {
+      setError(err.message || 'Image generation failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-indigo-100 overflow-hidden">
+      {/* Panel header */}
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-indigo-50/60 hover:bg-indigo-50 transition-colors cursor-pointer"
+      >
+        <span className="flex items-center gap-2 text-[12px] font-semibold text-indigo-500 uppercase tracking-widest">
+          <Camera size={12} />
+          දෘශ්‍ය ප්‍රශ්නය / Visual Prompt
+        </span>
+        {open ? <ChevronUp size={14} className="text-indigo-400" /> : <ChevronDown size={14} className="text-indigo-400" />}
+      </button>
+
+      {open && (
+        <div className="p-4 space-y-3 bg-white">
+          {/* Editable prompt area */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <Edit3 size={11} className="text-gray-400" />
+              <span className="text-[11px] text-gray-400 font-medium">
+                Auto-generated English prompt — you can edit before generating
+              </span>
+            </div>
+            <textarea
+              value={prompt}
+              onChange={e => setPrompt(e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2.5 text-[13px] text-gray-700 bg-gray-50 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 leading-relaxed font-mono"
+              placeholder="Visual prompt will appear here after headline generation…"
+            />
+          </div>
+
+          {/* Action button */}
+          <button
+            onClick={handleGenerate}
+            disabled={loading || !prompt.trim()}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#cd191a] text-white text-[13px] font-semibold rounded-lg hover:bg-red-700 active:bg-red-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                <span>රූපය සාදමින්… / Generating Image…</span>
+              </>
+            ) : imageUrl ? (
+              <>
+                <RefreshCw size={14} />
+                <span>නැවත සාදන්න / Regenerate Image</span>
+              </>
+            ) : (
+              <>
+                <Camera size={14} />
+                <span>රූපය සාදන්න / Generate Image</span>
+              </>
+            )}
+          </button>
+
+          {/* Loading skeleton (16:9) */}
+          {loading && (
+            <div className="w-full aspect-video rounded-lg bg-gray-100 overflow-hidden relative">
+              <div className="absolute inset-0 animate-shimmer" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                <Loader2 size={28} className="animate-spin text-gray-300" />
+                <p className="text-[12px] text-gray-400">රූපය ලබා ගනිමින්…</p>
+              </div>
+            </div>
+          )}
+
+          {/* Generated image (16:9) */}
+          {imageUrl && !loading && (
+            <div className="space-y-2.5">
+              <div className="w-full aspect-video rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-100">
+                <img
+                  src={imageUrl}
+                  alt="Generated news image"
+                  className="w-full h-full object-cover"
+                  onError={e => {
+                    e.target.style.display = 'none';
+                    setError('Image could not be displayed. The URL may have expired.');
+                  }}
+                />
+              </div>
+              {alignmentScore && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-gray-400">අර්ථ සමතුලිතතාව / Semantic Alignment:</span>
+                  <AlignmentBadge score={alignmentScore} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Error fallback */}
+          {error && !loading && (
+            <div className="p-3 bg-red-50 rounded-lg border border-red-100 flex items-start gap-2.5">
+              <ImageOff size={16} className="text-red-400 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px] text-red-600 font-medium">
+                  රූප නිර්මාණය අසාර්ථකයි / Image generation failed
+                </p>
+                <p className="text-[11px] text-red-500 mt-0.5 break-words">{error}</p>
+                <button
+                  onClick={handleGenerate}
+                  className="mt-2 text-[11px] text-[#cd191a] font-semibold hover:underline"
+                >
+                  නැවත උත්සාහ කරන්න / Retry
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Main export ────────────────────────────────────────────────── */
 export default function HeadlineOutputPanel({ output, loading, error }) {
   const [expandedIdx, setExpandedIdx] = useState(null);
@@ -148,12 +309,20 @@ export default function HeadlineOutputPanel({ output, loading, error }) {
         <div className="flex items-center justify-between mb-2.5">
           <span className="text-xs font-semibold text-gray-300 uppercase tracking-widest">Generated Headlines</span>
         </div>
-        {/* Best headline placeholder */}
         <div className="px-5 py-4 bg-gradient-to-r from-gray-50 to-gray-50 rounded-xl border border-gray-100 space-y-3 mb-4">
           <div className="h-3 w-24 rounded-md animate-shimmer mb-2" />
           <div className="h-5 rounded-md animate-shimmer" style={{ width: '85%' }} />
         </div>
-        {/* Candidate card placeholders */}
+        {/* Visual prompt skeleton */}
+        <div className="rounded-xl border border-indigo-100 mb-4 overflow-hidden">
+          <div className="px-4 py-3 bg-indigo-50/60">
+            <div className="h-3 w-40 rounded animate-shimmer" />
+          </div>
+          <div className="p-4 space-y-3">
+            <div className="h-16 rounded-lg animate-shimmer" />
+            <div className="h-9 rounded-lg animate-shimmer" />
+          </div>
+        </div>
         {[1, 2, 3].map(i => (
           <div key={i} className="rounded-xl border border-gray-100 bg-white px-4 py-3.5 mb-2.5 space-y-2">
             <div className="flex items-center gap-3">
@@ -165,7 +334,6 @@ export default function HeadlineOutputPanel({ output, loading, error }) {
             </div>
           </div>
         ))}
-        {/* Bottom half line */}
         <div className="h-4 rounded-md animate-shimmer mt-1" style={{ width: '45%' }} />
       </div>
     );
@@ -191,7 +359,7 @@ export default function HeadlineOutputPanel({ output, loading, error }) {
   const pipelineLog = output.pipeline_log || [];
 
   return (
-    <div id="headline-output" className="mt-6 space-y-5">
+    <div id="headline-output" className="mt-6 space-y-4">
       {/* Section header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -214,7 +382,9 @@ export default function HeadlineOutputPanel({ output, loading, error }) {
         <div className="px-5 py-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles size={14} className="text-emerald-500" />
-            <span className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">Best Headline</span>
+            <span className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">
+              හොඳම මාතෘකාව / Best Headline
+            </span>
           </div>
           <p className="text-[17px] font-semibold text-gray-900 leading-relaxed">
             {output.best_headline}
@@ -222,13 +392,18 @@ export default function HeadlineOutputPanel({ output, loading, error }) {
         </div>
       )}
 
+      {/* ── Visual Prompt Generation Module ── */}
+      <VisualPromptModule
+        initialPrompt={semantics.visual_prompt || ''}
+        headline={output.best_headline || ''}
+      />
+
       {/* Candidates list */}
       <div className="space-y-2.5">
         {candidates.map((c, i) => (
           <CandidateCard
             key={i}
             candidate={c}
-            index={i}
             isExpanded={expandedIdx === i}
             onToggle={() => setExpandedIdx(expandedIdx === i ? null : i)}
           />
@@ -268,16 +443,6 @@ export default function HeadlineOutputPanel({ output, loading, error }) {
               </span>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Visual prompt */}
-      {semantics.visual_prompt && (
-        <div className="px-4 py-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
-          <p className="text-[11px] font-semibold text-indigo-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-            <Sparkles size={12} /> Visual Prompt
-          </p>
-          <p className="text-[13px] text-indigo-700 leading-relaxed">{semantics.visual_prompt}</p>
         </div>
       )}
 

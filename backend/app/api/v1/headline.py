@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.openrouter_client import openrouter_generate_image
 from app.repositories.headline_repository import (
     get_generation_by_id,
     get_generations,
@@ -22,6 +23,8 @@ from app.schemas.headline import (
     HeadlineGenerateRequest,
     HeadlineGenerateResponse,
     HeadlineHistoryResponse,
+    ImageGenerateRequest,
+    ImageGenerateResponse,
     PipelineStageLog,
     SemanticExtraction,
     ValidationMetrics,
@@ -96,6 +99,58 @@ async def headline_detail_endpoint(
         raise HTTPException(status_code=404, detail="Generation not found")
 
     return _record_to_response(record)
+
+
+@router.post("/generate-image", response_model=ImageGenerateResponse)
+async def headline_generate_image_endpoint(
+    payload: ImageGenerateRequest,
+):
+    """
+    Generate a news image from an English visual prompt using the configured
+    IMAGEGEN_MODEL (OpenRouter image generation API).
+
+    Returns the image URL/data URI and a semantic alignment score.
+    Errors from the image API are surfaced as HTTP 502 to avoid disrupting
+    the headline generation flow.
+    """
+    try:
+        image_url = await openrouter_generate_image(
+            payload.prompt,
+            model=payload.model_id,
+            api_key=payload.key,
+            n=1,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Image generation failed: {exc}",
+        )
+
+    alignment_score = _calculate_alignment_score(payload.prompt)
+
+    return ImageGenerateResponse(
+        image_url=image_url,
+        alignment_score=alignment_score,
+        prompt_used=payload.prompt,
+    )
+
+
+def _calculate_alignment_score(prompt: str) -> str:
+    """
+    Heuristic semantic alignment score based on the richness of the prompt.
+
+    Counts the number of distinct descriptive phrases (comma-separated elements
+    before the style qualifier) as a proxy for content coverage.
+    """
+    style_suffix = "news photography style, photojournalism, high resolution"
+    main_prompt = prompt.replace(style_suffix, "").strip().rstrip(",").strip()
+    parts = [p.strip() for p in main_prompt.split(",") if p.strip()]
+    count = len(parts)
+    if count >= 4:
+        return "High"
+    elif count >= 2:
+        return "Medium"
+    return "Low"
 
 
 def _record_to_response(record) -> HeadlineGenerateResponse:

@@ -9,8 +9,10 @@ FastAPI application entrypoint.
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+import httpx
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
 from app.core.database import init_db, close_db
@@ -50,6 +52,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Global error handlers ──
+
+@app.exception_handler(httpx.HTTPStatusError)
+async def openrouter_error_handler(request: Request, exc: httpx.HTTPStatusError):
+    """Convert upstream OpenRouter HTTP errors into clean API responses."""
+    status = exc.response.status_code
+    if status == 429:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": (
+                    "The AI service is temporarily rate-limited. "
+                    "Please wait a few seconds and try again."
+                )
+            },
+        )
+    return JSONResponse(
+        status_code=502,
+        content={"detail": f"Upstream AI API error ({status}). Please try again."},
+    )
+
 
 # ── Routers ──
 app.include_router(v1_router)
