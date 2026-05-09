@@ -90,7 +90,19 @@ async def openrouter_chat(
 
             data = response.json()
             try:
-                return data["choices"][0]["message"]["content"].strip()
+                # OpenRouter can embed API-level errors inside a 200 response
+                if "error" in data:
+                    err = data["error"]
+                    raise ValueError(
+                        f"OpenRouter API error {err.get('code', '')}: {err.get('message', err)}"
+                    )
+                content = data["choices"][0]["message"].get("content")
+                if content is None:
+                    raise ValueError(
+                        f"OpenRouter returned null content (model may be unavailable). "
+                        f"Response: {data}"
+                    )
+                return content.strip()
             except (KeyError, IndexError) as exc:
                 raise ValueError(f"Unexpected OpenRouter response shape: {data}") from exc
 
