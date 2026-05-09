@@ -28,9 +28,6 @@ class Settings(BaseSettings):
     # ── OpenRouter ──
     OPENROUTER_API_KEY: str
     OPENROUTER_MODEL: str = "openrouter/free"
-    # Replicate API for image generation (https://replicate.com)
-    IMAGEGEN_API_KEY: str | None = None
-    IMAGEGEN_MODEL: str = "stability-ai/stable-diffusion:27b93a2413e7f36cd83da926dd3be141558acbb8"
 
     @property
     def cors_origin_list(self) -> list[str]:
