@@ -4,6 +4,27 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
+@font-face {
+  font-family: 'Gwen';
+  src: url('./assets/font/WEB/WOFF2/Gwen-Trial-Bold.woff2') format('woff2');
+  font-weight: bold;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Gwen';
+  src: url('./assets/font/WEB/WOFF2/Gwen-Trial-Regular.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'GwenText';
+  src: url('./assets/font/WEB/WOFF2/GwenText-Trial-Regular.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {
