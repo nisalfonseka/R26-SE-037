@@ -164,6 +164,7 @@ function App() {
                 output={output}
                 loading={loading}
                 error={error}
+                articleText={input}
               />
             ) : (
               <OutputPanel

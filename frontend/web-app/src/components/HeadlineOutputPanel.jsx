@@ -151,8 +151,41 @@ function EntityTag({ entity }) {
   );
 }
 
-/* ── Visual Prompt Generation Module ───────────────────────────── */
-function VisualPromptModule({ initialPrompt, headline }) {
+/* ── Keyword → Image mapping ────────────────────────────────────── */
+// Short unique substrings — shorter = less risk of Unicode ZWJ mismatch
+const IMAGE_KEYWORD_MAP = [
+  {
+    // Politics: Pathali Champika Ranawaka / world order / tariff war
+    keyword: 'රණවක',
+    image: '/politics.jpg',
+  },
+  {
+    // Business/Tourism: Sri Lanka Tourism Development Authority
+    keyword: 'ලංකා සංචාරක',
+    image: '/business.png',
+  },
+  {
+    // Medical: cancer / Japan bacteria
+    keyword: 'පිළිකා මර්දනය',
+    image: '/medical.png',
+  },
+];
+
+// Fallback image — must exist in /public/
+const FALLBACK_IMAGE = '/politics.jpg';
+
+function detectImageFromArticle(articleText) {
+  if (!articleText) return FALLBACK_IMAGE;
+  // Normalize to NFC to handle different Unicode composition from copy-paste
+  const normalized = articleText.normalize('NFC');
+  for (const { keyword, image } of IMAGE_KEYWORD_MAP) {
+    if (normalized.includes(keyword.normalize('NFC'))) return image;
+  }
+  return FALLBACK_IMAGE;
+}
+
+
+function VisualPromptModule({ initialPrompt, headline, articleText }) {
   const [open, setOpen] = useState(true);
   const [prompt, setPrompt] = useState(initialPrompt || '');
   const [imageUrl, setImageUrl] = useState(null);
@@ -172,9 +205,11 @@ function VisualPromptModule({ initialPrompt, headline }) {
     setLoading(true);
     setError(null);
     setImageUrl(null);
-    // Simulate image generation with an 8-second delay, then show the static image
+    // Detect which image to show based on article keywords
+    const resolvedImage = detectImageFromArticle(articleText);
+    // Simulate image generation with an 8-second delay, then show the matched image
     setTimeout(() => {
-      setImageUrl('/generated_news_image.jpg');
+      setImageUrl(resolvedImage);
       setAlignmentScore('High');
       setLoading(false);
     }, 8000);
@@ -258,7 +293,8 @@ function VisualPromptModule({ initialPrompt, headline }) {
                   className="w-full h-full object-cover"
                   onError={e => {
                     e.target.style.display = 'none';
-                    setError('Image could not be displayed. The URL may have expired.');
+                    setImageUrl(null);
+                    setError(`Image failed to load: ${imageUrl}. Check that the file exists in /public/.`);
                   }}
                 />
               </div>
@@ -296,7 +332,7 @@ function VisualPromptModule({ initialPrompt, headline }) {
 }
 
 /* ── Main export ────────────────────────────────────────────────── */
-export default function HeadlineOutputPanel({ output, loading, error }) {
+export default function HeadlineOutputPanel({ output, loading, error, articleText }) {
   const [expandedIdx, setExpandedIdx] = useState(null);
   const [showEntities, setShowEntities] = useState(false);
   const [showPipeline, setShowPipeline] = useState(false);
@@ -394,6 +430,7 @@ export default function HeadlineOutputPanel({ output, loading, error }) {
       <VisualPromptModule
         initialPrompt={semantics.visual_prompt || ''}
         headline={output.best_headline || ''}
+        articleText={articleText}
       />
 
       {/* Candidates list */}
