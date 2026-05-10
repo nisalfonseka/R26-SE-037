@@ -3,6 +3,23 @@ import { Send, Trash2, Bot, User, Loader2, Cpu, Wifi, WifiOff, ChevronDown, Chev
 
 const SINLLAMA_API = 'https://carving-nebulizer-dandy.ngrok-free.dev/generate';
 
+// ── Task config ───────────────────────────────────────────────
+const TASKS = [
+  { id: 'grammar',    label: 'Grammar',    hint: 'cap ×1.5 input' },
+  { id: 'headline',   label: 'Headline',   hint: 'cap 60 tokens'   },
+  { id: 'summarizer', label: 'Summarizer', hint: 'cap ×0.3 input'  },
+  { id: 'style',      label: 'Style',      hint: 'cap ×1.5 input'  },
+];
+
+// ── Style config (only shown when task === 'style') ───────────
+const STYLES = [
+  { id: 'formal',    label: 'Formal',    desc: 'Official news language'   },
+  { id: 'sports',    label: 'Sports',    desc: 'Active, energetic tone'   },
+  { id: 'youth',     label: 'Youth',     desc: 'Casual, modern phrasing'  },
+  { id: 'editorial', label: 'Editorial', desc: 'Analytical & opinionated' },
+  { id: 'feature',   label: 'Feature',   desc: 'Narrative story-driven'   },
+];
+
 const EXAMPLE_PROMPTS = [
   'ශ්‍රී ලංකාවේ ප්‍රධාන නගර මොනවාද?',
   'සිංහල භාෂාවේ ඉතිහාසය කෙරෙහි කෙටියෙන් විස්තර කරන්න.',
@@ -11,25 +28,26 @@ const EXAMPLE_PROMPTS = [
 ];
 
 export default function SinLLamaPage() {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [task, setTask] = useState('grammar'); // grammar | headline | summarizer | style
+  const [messages,    setMessages]    = useState([]);
+  const [input,       setInput]       = useState('');
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState(null);
+  const [task,        setTask]        = useState('grammar');
+  const [style,       setStyle]       = useState('formal');   // ← new
   const [showSettings, setShowSettings] = useState(false);
-  const [online, setOnline] = useState(null); // null = unknown, true/false
-  const [elapsed, setElapsed] = useState(null);
+  const [online,      setOnline]      = useState(null);
+  const [elapsed,     setElapsed]     = useState(null);
 
-  const bottomRef = useRef(null);
+  const bottomRef   = useRef(null);
   const textareaRef = useRef(null);
-  const timerRef = useRef(null);
+  const timerRef    = useRef(null);
 
-  // Ping the server once to check reachability
+  // Ping server
   useEffect(() => {
     const controller = new AbortController();
-    fetch(SINLLAMA_API.replace('/generate', '/docs'), {
-      method: 'GET',
-      signal: controller.signal,
+    fetch(SINLLAMA_API.replace('/generate', '/health'), {
+      method : 'GET',
+      signal : controller.signal,
       headers: { 'ngrok-skip-browser-warning': 'true' },
     })
       .then(() => setOnline(true))
@@ -37,7 +55,6 @@ export default function SinLLamaPage() {
     return () => controller.abort();
   }, []);
 
-  // Scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
@@ -50,8 +67,7 @@ export default function SinLLamaPage() {
     setError(null);
     setElapsed(null);
 
-    const userMsg = { role: 'user', text: prompt };
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages(prev => [...prev, { role: 'user', text: prompt }]);
     setLoading(true);
 
     const start = Date.now();
@@ -59,36 +75,44 @@ export default function SinLLamaPage() {
       setElapsed(((Date.now() - start) / 1000).toFixed(1));
     }, 100);
 
+    // Build request body — only include 'style' when task === 'style'
+    const body = { prompt, task };
+    if (task === 'style') body.style = style;
+
     try {
       const res = await fetch(SINLLAMA_API, {
-        method: 'POST',
+        method : 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type'              : 'application/json',
           'ngrok-skip-browser-warning': 'true',
         },
-        body: JSON.stringify({ prompt, task }),
+        body: JSON.stringify(body),
       });
 
       clearInterval(timerRef.current);
       setElapsed(((Date.now() - start) / 1000).toFixed(1));
 
       if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`Server error ${res.status}: ${errText}`);
+        const errData = await res.json().catch(() => ({ detail: res.statusText }));
+        const detail  = errData?.detail;
+        const msg     = typeof detail === 'object'
+          ? `${detail.error} Valid: ${detail.valid?.join(', ')}`
+          : (detail ?? `Server error ${res.status}`);
+        throw new Error(msg);
       }
 
       const data = await res.json();
-      const botMsg = {
+      setMessages(prev => [...prev, {
         role: 'bot',
         text: data.response ?? JSON.stringify(data),
-        meta: data.task ? {
-          task:        data.task,
-          inputTok:    data.input_tokens,
-          cap:         data.max_cap_used,
-          outputTok:   data.output_tokens,
-        } : null,
-      };
-      setMessages((prev) => [...prev, botMsg]);
+        meta: {
+          task      : data.task,
+          style     : data.style ?? null,   // echoed from server, null for non-style tasks
+          inputTok  : data.input_tokens,
+          cap       : data.max_cap_used,
+          outputTok : data.output_tokens,
+        },
+      }]);
       setOnline(true);
     } catch (err) {
       clearInterval(timerRef.current);
@@ -100,17 +124,10 @@ export default function SinLLamaPage() {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
-  const handleClear = () => {
-    setMessages([]);
-    setError(null);
-    setElapsed(null);
-  };
+  const handleClear = () => { setMessages([]); setError(null); setElapsed(null); };
 
   const autoResize = (el) => {
     el.style.height = 'auto';
@@ -119,6 +136,7 @@ export default function SinLLamaPage() {
 
   return (
     <div className="sinllama-page">
+
       {/* ── Header ── */}
       <div className="sl-header">
         <div className="sl-header-left">
@@ -130,24 +148,26 @@ export default function SinLLamaPage() {
         </div>
 
         <div className="sl-header-right">
-          {/* Status pill */}
           <div className={`sl-status-pill ${online === true ? 'online' : online === false ? 'offline' : 'checking'}`}>
-            {online === true ? <Wifi size={13} /> : online === false ? <WifiOff size={13} /> : <Loader2 size={13} className="spin" />}
-            <span>{online === true ? 'Server online' : online === false ? 'Server offline' : 'Checking…'}</span>
+            {online === true  ? <Wifi size={13} /> :
+             online === false ? <WifiOff size={13} /> :
+                                <Loader2 size={13} className="spin" />}
+            <span>
+              {online === true ? 'Server online' : online === false ? 'Server offline' : 'Checking…'}
+            </span>
           </div>
 
-          {/* Settings toggle */}
-          <button
-            className="sl-icon-btn"
-            onClick={() => setShowSettings((v) => !v)}
-            title="Generation settings"
-          >
+          <button className="sl-icon-btn" onClick={() => setShowSettings(v => !v)} title="Generation settings">
             <Sliders size={17} />
             {showSettings ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
 
-          {/* Clear */}
-          <button className="sl-icon-btn danger" onClick={handleClear} title="Clear conversation" disabled={messages.length === 0 && !error}>
+          <button
+            className="sl-icon-btn danger"
+            onClick={handleClear}
+            title="Clear conversation"
+            disabled={messages.length === 0 && !error}
+          >
             <Trash2 size={17} />
           </button>
         </div>
@@ -156,18 +176,14 @@ export default function SinLLamaPage() {
       {/* ── Settings panel ── */}
       {showSettings && (
         <div className="sl-settings-panel">
+
+          {/* Task row */}
           <div className="sl-setting-row">
             <label>Task</label>
             <div className="sl-toggle-group">
-              {[
-                { id: 'grammar',    label: 'Grammar',    hint: 'cap ×1.5 input' },
-                { id: 'headline',   label: 'Headline',   hint: 'cap 60 tokens'   },
-                { id: 'summarizer', label: 'Summarizer', hint: 'cap ×0.3 input'  },
-                { id: 'style',      label: 'Style',      hint: 'cap ×1.5 input'  },
-              ].map(({ id, label, hint }) => (
+              {TASKS.map(({ id, label, hint }) => (
                 <button
                   key={id}
-                  id={`task-${id}`}
                   className={`sl-toggle-btn ${task === id ? 'active' : ''}`}
                   onClick={() => setTask(id)}
                 >
@@ -177,8 +193,31 @@ export default function SinLLamaPage() {
               ))}
             </div>
           </div>
+
+          {/* Style row — only visible when task === 'style' */}
+          {task === 'style' && (
+            <div className="sl-setting-row sl-style-row">
+              <label>Style</label>
+              <div className="sl-style-grid">
+                {STYLES.map(({ id, label, desc }) => (
+                  <button
+                    key={id}
+                    className={`sl-style-btn ${style === id ? 'active' : ''}`}
+                    onClick={() => setStyle(id)}
+                  >
+                    <span className="sl-style-label">{label}</span>
+                    <span className="sl-style-desc">{desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <p className="sl-settings-note">
             Endpoint: <code>{SINLLAMA_API}</code>
+            {task === 'style' && (
+              <span className="sl-settings-note-style"> · style: <strong>{style}</strong></span>
+            )}
           </p>
         </div>
       )}
@@ -187,22 +226,13 @@ export default function SinLLamaPage() {
       <div className="sl-chat-area">
         {messages.length === 0 && !loading && !error && (
           <div className="sl-empty-state">
-            <div className="sl-empty-icon">
-              <Bot size={40} strokeWidth={1.5} />
-            </div>
+            <div className="sl-empty-icon"><Bot size={40} strokeWidth={1.5} /></div>
             <h3>Test SinLLaMA</h3>
             <p>Send any Sinhala or English prompt to the GPU model running via ngrok.</p>
-
             <div className="sl-example-prompts">
               {EXAMPLE_PROMPTS.map((p, i) => (
-                <button
-                  key={i}
-                  className="sl-example-chip"
-                  onClick={() => {
-                    setInput(p);
-                    textareaRef.current?.focus();
-                  }}
-                >
+                <button key={i} className="sl-example-chip"
+                  onClick={() => { setInput(p); textareaRef.current?.focus(); }}>
                   {p}
                 </button>
               ))}
@@ -220,6 +250,10 @@ export default function SinLLamaPage() {
               {msg.meta && (
                 <div className="sl-meta-chips">
                   <span className="sl-chip task">{msg.meta.task}</span>
+                  {/* Show style chip only when the server echoes a style back */}
+                  {msg.meta.style && (
+                    <span className="sl-chip style">{msg.meta.style}</span>
+                  )}
                   <span className="sl-chip">in&nbsp;{msg.meta.inputTok}t</span>
                   <span className="sl-chip">cap&nbsp;{msg.meta.cap}t</span>
                   <span className="sl-chip">out&nbsp;{msg.meta.outputTok}t</span>
@@ -233,9 +267,7 @@ export default function SinLLamaPage() {
           <div className="sl-message bot">
             <div className="sl-avatar"><Bot size={15} strokeWidth={2.5} /></div>
             <div className="sl-bubble loading-bubble">
-              <span className="sl-dot" />
-              <span className="sl-dot" />
-              <span className="sl-dot" />
+              <span className="sl-dot" /><span className="sl-dot" /><span className="sl-dot" />
               {elapsed && <span className="sl-elapsed">{elapsed}s</span>}
             </div>
           </div>
@@ -253,22 +285,23 @@ export default function SinLLamaPage() {
 
       {/* ── Input bar ── */}
       <div className="sl-input-bar">
+        {/* Active task + style badge beside the textarea */}
+        <div className="sl-active-badge">
+          <span className="sl-active-task">{task}</span>
+          {task === 'style' && <span className="sl-active-style">{style}</span>}
+        </div>
+
         <textarea
           ref={textareaRef}
-          id="sinllama-input"
           rows={1}
           className="sl-textarea"
           placeholder="Type a Sinhala or English prompt… (Enter to send)"
           value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            autoResize(e.target);
-          }}
+          onChange={e => { setInput(e.target.value); autoResize(e.target); }}
           onKeyDown={handleKeyDown}
           disabled={loading}
         />
         <button
-          id="sinllama-send"
           className="sl-send-btn"
           onClick={handleSend}
           disabled={loading || !input.trim()}
@@ -296,57 +329,32 @@ export default function SinLLamaPage() {
           gap: 12px;
           margin-bottom: 18px;
         }
-        .sl-header-left { display: flex; flex-direction: column; gap: 4px; }
+        .sl-header-left  { display: flex; flex-direction: column; gap: 4px; }
         .sl-header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
         .sl-model-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
+          display: inline-flex; align-items: center; gap: 7px;
           background: linear-gradient(135deg, #cd191a 0%, #8b0000 100%);
-          color: #fff;
-          font-size: 14px;
-          font-weight: 700;
-          padding: 5px 14px;
-          border-radius: 999px;
-          letter-spacing: 0.03em;
+          color: #fff; font-size: 14px; font-weight: 700;
+          padding: 5px 14px; border-radius: 999px; letter-spacing: 0.03em;
           box-shadow: 0 2px 10px rgba(205,25,26,0.35);
         }
-        .sl-subtitle {
-          font-size: 12px;
-          color: #6b7280;
-          margin: 0;
-          padding-left: 2px;
-        }
+        .sl-subtitle { font-size: 12px; color: #6b7280; margin: 0; padding-left: 2px; }
 
-        /* Status pill */
         .sl-status-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          font-size: 12px;
-          font-weight: 600;
-          padding: 4px 12px;
-          border-radius: 999px;
-          letter-spacing: 0.02em;
+          display: inline-flex; align-items: center; gap: 5px;
+          font-size: 12px; font-weight: 600;
+          padding: 4px 12px; border-radius: 999px; letter-spacing: 0.02em;
         }
-        .sl-status-pill.online  { background: #d1fae5; color: #065f46; }
-        .sl-status-pill.offline { background: #fee2e2; color: #991b1b; }
+        .sl-status-pill.online   { background: #d1fae5; color: #065f46; }
+        .sl-status-pill.offline  { background: #fee2e2; color: #991b1b; }
         .sl-status-pill.checking { background: #f3f4f6; color: #6b7280; }
 
-        /* Icon buttons */
         .sl-icon-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          padding: 6px 10px;
-          border-radius: 10px;
-          border: 1px solid #e5e7eb;
-          background: #fff;
-          color: #374151;
-          font-size: 13px;
-          font-weight: 500;
-          cursor: pointer;
+          display: inline-flex; align-items: center; gap: 4px;
+          padding: 6px 10px; border-radius: 10px;
+          border: 1px solid #e5e7eb; background: #fff; color: #374151;
+          font-size: 13px; font-weight: 500; cursor: pointer;
           transition: background 0.15s, color 0.15s;
         }
         .sl-icon-btn:hover { background: #f3f4f6; }
@@ -355,239 +363,161 @@ export default function SinLLamaPage() {
 
         /* ── Settings panel ── */
         .sl-settings-panel {
-          background: #f8fafc;
-          border: 1px solid #e5e7eb;
-          border-radius: 14px;
-          padding: 14px 18px;
-          margin-bottom: 16px;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
+          background: #f8fafc; border: 1px solid #e5e7eb;
+          border-radius: 14px; padding: 14px 18px; margin-bottom: 16px;
+          display: flex; flex-direction: column; gap: 12px;
         }
         .sl-setting-row {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          flex-wrap: wrap;
+          display: flex; align-items: flex-start; gap: 14px; flex-wrap: wrap;
         }
         .sl-setting-row label {
-          font-size: 13px;
-          font-weight: 600;
-          color: #374151;
-          min-width: 100px;
+          font-size: 13px; font-weight: 600; color: #374151;
+          min-width: 56px; padding-top: 8px;
         }
 
-        /* Output-type toggle */
-        .sl-toggle-group {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
+        /* Task toggle */
+        .sl-toggle-group { display: flex; gap: 8px; flex-wrap: wrap; }
         .sl-toggle-btn {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 2px;
-          padding: 7px 18px;
-          border-radius: 10px;
-          border: 1.5px solid #e5e7eb;
-          background: #fff;
-          color: #374151;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.15s;
-          line-height: 1.2;
+          display: flex; flex-direction: column; align-items: center; gap: 2px;
+          padding: 7px 18px; border-radius: 10px;
+          border: 1.5px solid #e5e7eb; background: #fff; color: #374151;
+          font-size: 13px; font-weight: 600; cursor: pointer;
+          transition: all 0.15s; line-height: 1.2;
         }
-        .sl-toggle-btn:hover {
-          border-color: #fca5a5;
-          background: #fef2f2;
-          color: #cd191a;
-        }
+        .sl-toggle-btn:hover { border-color: #fca5a5; background: #fef2f2; color: #cd191a; }
         .sl-toggle-btn.active {
           background: linear-gradient(135deg, #cd191a, #8b0000);
-          border-color: transparent;
-          color: #fff;
+          border-color: transparent; color: #fff;
           box-shadow: 0 2px 8px rgba(205,25,26,0.3);
         }
-        .sl-toggle-hint {
-          font-size: 10px;
-          font-weight: 400;
-          opacity: 0.75;
-          letter-spacing: 0.02em;
-        }
+        .sl-toggle-hint { font-size: 10px; font-weight: 400; opacity: 0.75; letter-spacing: 0.02em; }
         .sl-toggle-btn.active .sl-toggle-hint { opacity: 0.85; }
 
+        /* Style grid (5 cards) */
+        .sl-style-row { align-items: flex-start; }
+        .sl-style-grid {
+          display: flex; gap: 8px; flex-wrap: wrap;
+        }
+        .sl-style-btn {
+          display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+          padding: 8px 14px; border-radius: 10px;
+          border: 1.5px solid #e5e7eb; background: #fff; color: #374151;
+          cursor: pointer; transition: all 0.15s; text-align: left;
+          min-width: 100px;
+        }
+        .sl-style-btn:hover { border-color: #fca5a5; background: #fef2f2; }
+        .sl-style-btn.active {
+          border-color: #cd191a; background: #fff5f5;
+          box-shadow: 0 0 0 3px rgba(205,25,26,0.1);
+        }
+        .sl-style-label {
+          font-size: 13px; font-weight: 700; color: #1f2937;
+          transition: color 0.15s;
+        }
+        .sl-style-btn.active .sl-style-label { color: #cd191a; }
+        .sl-style-desc {
+          font-size: 10.5px; color: #9ca3af; font-weight: 400; line-height: 1.3;
+        }
+        .sl-style-btn.active .sl-style-desc { color: #cd191a; opacity: 0.7; }
+
         .sl-settings-note {
-          font-size: 11px;
-          color: #9ca3af;
-          margin: 0;
+          font-size: 11px; color: #9ca3af; margin: 0;
         }
         .sl-settings-note code {
-          background: #f1f5f9;
-          padding: 1px 5px;
-          border-radius: 4px;
-          font-size: 10.5px;
-          color: #475569;
-          word-break: break-all;
+          background: #f1f5f9; padding: 1px 5px; border-radius: 4px;
+          font-size: 10.5px; color: #475569; word-break: break-all;
         }
+        .sl-settings-note-style {
+          margin-left: 6px; color: #9ca3af;
+        }
+        .sl-settings-note-style strong { color: #cd191a; }
 
         /* ── Chat area ── */
         .sl-chat-area {
-          flex: 1;
-          overflow-y: auto;
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-          padding: 2px 2px 8px;
-          min-height: 0;
-          scroll-behavior: smooth;
+          flex: 1; overflow-y: auto;
+          display: flex; flex-direction: column; gap: 14px;
+          padding: 2px 2px 8px; min-height: 0; scroll-behavior: smooth;
         }
         .sl-chat-area::-webkit-scrollbar { width: 5px; }
         .sl-chat-area::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 999px; }
 
-        /* Empty state */
         .sl-empty-state {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
-          padding: 48px 24px;
-          gap: 10px;
-          color: #6b7280;
+          flex: 1; display: flex; flex-direction: column;
+          align-items: center; justify-content: center;
+          text-align: center; padding: 48px 24px; gap: 10px; color: #6b7280;
         }
         .sl-empty-icon {
-          width: 72px;
-          height: 72px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #cd191a;
-          margin-bottom: 6px;
+          width: 72px; height: 72px; border-radius: 50%;
+          background: linear-gradient(135deg, #fef2f2, #fee2e2);
+          display: flex; align-items: center; justify-content: center;
+          color: #cd191a; margin-bottom: 6px;
           box-shadow: 0 4px 20px rgba(205,25,26,0.12);
         }
-        .sl-empty-state h3 {
-          font-size: 18px;
-          font-weight: 700;
-          color: #1f2937;
-          margin: 0;
-        }
-        .sl-empty-state p {
-          font-size: 13.5px;
-          max-width: 380px;
-          line-height: 1.6;
-          margin: 0;
-        }
+        .sl-empty-state h3 { font-size: 18px; font-weight: 700; color: #1f2937; margin: 0; }
+        .sl-empty-state p  { font-size: 13.5px; max-width: 380px; line-height: 1.6; margin: 0; }
 
-        /* Example prompts */
         .sl-example-prompts {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          justify-content: center;
-          margin-top: 10px;
-          max-width: 520px;
+          display: flex; flex-wrap: wrap; gap: 8px;
+          justify-content: center; margin-top: 10px; max-width: 520px;
         }
         .sl-example-chip {
-          background: #fff;
-          border: 1px solid #e5e7eb;
-          border-radius: 999px;
-          padding: 6px 14px;
-          font-size: 12.5px;
-          color: #374151;
-          cursor: pointer;
-          transition: all 0.15s;
-          text-align: left;
+          background: #fff; border: 1px solid #e5e7eb; border-radius: 999px;
+          padding: 6px 14px; font-size: 12.5px; color: #374151;
+          cursor: pointer; transition: all 0.15s;
         }
-        .sl-example-chip:hover {
-          background: #fef2f2;
-          border-color: #fca5a5;
-          color: #cd191a;
-        }
+        .sl-example-chip:hover { background: #fef2f2; border-color: #fca5a5; color: #cd191a; }
 
         /* Messages */
         .sl-message {
-          display: flex;
-          gap: 10px;
-          align-items: flex-start;
+          display: flex; gap: 10px; align-items: flex-start;
           animation: fadeUp 0.18s ease;
         }
         .sl-message.user { flex-direction: row-reverse; }
 
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(6px); }
-          to   { opacity: 1; transform: translateY(0);   }
+          to   { opacity: 1; transform: translateY(0); }
         }
 
         .sl-avatar {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          flex-shrink: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 14px;
+          width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center;
         }
         .sl-message.user .sl-avatar {
           background: linear-gradient(135deg, #cd191a, #8b0000);
-          color: #fff;
-          box-shadow: 0 2px 8px rgba(205,25,26,0.3);
+          color: #fff; box-shadow: 0 2px 8px rgba(205,25,26,0.3);
         }
         .sl-message.bot .sl-avatar {
-          background: #f1f5f9;
-          color: #475569;
-          border: 1px solid #e2e8f0;
+          background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;
         }
 
         .sl-bubble {
-          max-width: 78%;
-          padding: 11px 16px;
-          border-radius: 16px;
-          font-size: 14px;
-          line-height: 1.65;
-          word-break: break-word;
+          max-width: 78%; padding: 11px 16px; border-radius: 16px;
+          font-size: 14px; line-height: 1.65; word-break: break-word;
         }
         .sl-message.user .sl-bubble {
-          background: linear-gradient(135deg, #cd191a, #a01010);
-          color: #fff;
+          background: linear-gradient(135deg, #cd191a, #a01010); color: #fff;
           border-bottom-right-radius: 4px;
           box-shadow: 0 2px 10px rgba(205,25,26,0.25);
         }
         .sl-message.bot .sl-bubble {
-          background: #f8fafc;
-          color: #1f2937;
-          border: 1px solid #e5e7eb;
-          border-bottom-left-radius: 4px;
+          background: #f8fafc; color: #1f2937;
+          border: 1px solid #e5e7eb; border-bottom-left-radius: 4px;
         }
         .sl-text {
-          margin: 0;
-          white-space: pre-wrap;
-          font-family: inherit;
-          font-size: 14px;
-          line-height: 1.65;
+          margin: 0; white-space: pre-wrap;
+          font-family: inherit; font-size: 14px; line-height: 1.65;
         }
 
-        /* Loading dots */
+        /* Loading */
         .loading-bubble {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          padding: 14px 18px;
-          background: #f8fafc;
-          border: 1px solid #e5e7eb;
-          border-bottom-left-radius: 4px;
+          display: flex; align-items: center; gap: 4px;
+          padding: 14px 18px; background: #f8fafc;
+          border: 1px solid #e5e7eb; border-bottom-left-radius: 4px;
         }
         .sl-dot {
-          width: 7px;
-          height: 7px;
-          background: #9ca3af;
-          border-radius: 50%;
-          animation: bounce 1.2s infinite;
+          width: 7px; height: 7px; background: #9ca3af;
+          border-radius: 50%; animation: bounce 1.2s infinite;
         }
         .sl-dot:nth-child(2) { animation-delay: 0.2s; }
         .sl-dot:nth-child(3) { animation-delay: 0.4s; }
@@ -595,106 +525,84 @@ export default function SinLLamaPage() {
           0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
           40%            { transform: translateY(-5px); opacity: 1; }
         }
-        .sl-elapsed {
-          font-size: 11px;
-          color: #9ca3af;
-          margin-left: 8px;
-          font-weight: 500;
-        }
+        .sl-elapsed { font-size: 11px; color: #9ca3af; margin-left: 8px; font-weight: 500; }
 
-        /* Error bar */
+        /* Error */
         .sl-error-bar {
-          display: flex;
-          align-items: flex-start;
-          gap: 8px;
-          background: #fff5f5;
-          border: 1px solid #fca5a5;
-          border-radius: 12px;
-          padding: 11px 16px;
-          color: #cd191a;
-          font-size: 13px;
-          font-weight: 500;
+          display: flex; align-items: flex-start; gap: 8px;
+          background: #fff5f5; border: 1px solid #fca5a5;
+          border-radius: 12px; padding: 11px 16px;
+          color: #cd191a; font-size: 13px; font-weight: 500;
         }
 
         /* ── Input bar ── */
         .sl-input-bar {
-          display: flex;
-          align-items: flex-end;
-          gap: 10px;
-          padding: 10px 0 4px;
-          border-top: 1px solid #e5e7eb;
-          margin-top: 6px;
+          display: flex; align-items: flex-end; gap: 10px;
+          padding: 10px 0 4px; border-top: 1px solid #e5e7eb; margin-top: 6px;
         }
+
+        /* Active task/style badge in the input row */
+        .sl-active-badge {
+          display: flex; flex-direction: column; align-items: center; gap: 3px;
+          flex-shrink: 0; padding-bottom: 4px;
+        }
+        .sl-active-task {
+          font-size: 10px; font-weight: 700; text-transform: uppercase;
+          letter-spacing: 0.07em; color: #cd191a;
+          background: #fef2f2; border: 1px solid #fca5a5;
+          padding: 2px 7px; border-radius: 999px;
+        }
+        .sl-active-style {
+          font-size: 9.5px; font-weight: 600; text-transform: uppercase;
+          letter-spacing: 0.06em; color: #6b7280;
+          background: #f3f4f6; border: 1px solid #e5e7eb;
+          padding: 1px 6px; border-radius: 999px;
+        }
+
         .sl-textarea {
-          flex: 1;
-          resize: none;
-          border: 1.5px solid #e5e7eb;
-          border-radius: 14px;
-          padding: 10px 14px;
-          font-size: 14px;
-          font-family: inherit;
-          line-height: 1.5;
-          color: #1f2937;
-          background: #fff;
-          outline: none;
+          flex: 1; resize: none;
+          border: 1.5px solid #e5e7eb; border-radius: 14px;
+          padding: 10px 14px; font-size: 14px; font-family: inherit;
+          line-height: 1.5; color: #1f2937; background: #fff; outline: none;
           transition: border-color 0.15s, box-shadow 0.15s;
-          min-height: 44px;
-          max-height: 160px;
-          overflow-y: auto;
+          min-height: 44px; max-height: 160px; overflow-y: auto;
         }
-        .sl-textarea:focus {
-          border-color: #cd191a;
-          box-shadow: 0 0 0 3px rgba(205,25,26,0.1);
-        }
+        .sl-textarea:focus { border-color: #cd191a; box-shadow: 0 0 0 3px rgba(205,25,26,0.1); }
         .sl-textarea:disabled { background: #f9fafb; opacity: 0.7; }
 
         .sl-send-btn {
-          width: 44px;
-          height: 44px;
-          border-radius: 12px;
+          width: 44px; height: 44px; border-radius: 12px;
           background: linear-gradient(135deg, #cd191a, #8b0000);
-          color: #fff;
-          border: none;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
+          color: #fff; border: none;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; flex-shrink: 0;
           transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
           box-shadow: 0 2px 10px rgba(205,25,26,0.3);
-          flex-shrink: 0;
         }
         .sl-send-btn:hover:not(:disabled) {
-          opacity: 0.9;
-          transform: translateY(-1px);
+          opacity: 0.9; transform: translateY(-1px);
           box-shadow: 0 4px 14px rgba(205,25,26,0.4);
         }
         .sl-send-btn:active:not(:disabled) { transform: scale(0.96); }
         .sl-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-        /* Debug meta chips on bot bubbles */
-        .sl-meta-chips {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 5px;
-          margin-top: 8px;
-        }
+        /* Meta chips */
+        .sl-meta-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
         .sl-chip {
-          font-size: 10.5px;
-          font-weight: 600;
-          padding: 2px 8px;
-          border-radius: 999px;
-          background: #e2e8f0;
-          color: #475569;
-          letter-spacing: 0.02em;
+          font-size: 10.5px; font-weight: 600;
+          padding: 2px 8px; border-radius: 999px;
+          background: #e2e8f0; color: #475569; letter-spacing: 0.02em;
         }
         .sl-chip.task {
-          background: #fef2f2;
-          color: #cd191a;
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
+          background: #fef2f2; color: #cd191a;
+          text-transform: uppercase; letter-spacing: 0.06em;
+        }
+        /* Style chip — distinct from task chip */
+        .sl-chip.style {
+          background: #f0f9ff; color: #0369a1;
+          text-transform: capitalize; letter-spacing: 0.04em;
         }
 
-        /* Spinner utility */
         .spin { animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
