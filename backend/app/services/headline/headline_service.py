@@ -90,7 +90,7 @@ async def generate_headline_pipeline(
         },
     ]
 
-    raw_response = await openrouter_chat(messages, temperature=0.7, max_tokens=1024)
+    raw_response = await openrouter_chat(messages, temperature=0.7, max_tokens=3072)
     candidates = _parse_response(raw_response, num_candidates)
 
     best_headline = candidates[0].headline if candidates else article_text[:max_length]
@@ -205,7 +205,7 @@ async def _generate_visual_prompt(headline: str, style: str) -> str:
     ]
 
     try:
-        result = await openrouter_chat(messages, temperature=0.4, max_tokens=200)
+        result = await openrouter_chat(messages, temperature=0.4, max_tokens=512)
         result = _clean_visual_prompt(result)
         logger.info("Visual prompt generated: %s", result[:120])
         return result

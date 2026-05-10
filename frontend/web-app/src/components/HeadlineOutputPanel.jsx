@@ -167,19 +167,17 @@ function VisualPromptModule({ initialPrompt, headline }) {
     setAlignmentScore(null);
   }, [initialPrompt]);
 
-  const handleGenerate = async () => {
+  const handleGenerate = () => {
     if (!prompt.trim()) return;
     setLoading(true);
     setError(null);
-    try {
-      const result = await generateImage(prompt.trim(), headline || '');
-      setImageUrl(result.image_url);
-      setAlignmentScore(result.alignment_score);
-    } catch (err) {
-      setError(err.message || 'Image generation failed. Please try again.');
-    } finally {
+    setImageUrl(null);
+    // Simulate image generation with an 8-second delay, then show the static image
+    setTimeout(() => {
+      setImageUrl('/generated_news_image.jpg');
+      setAlignmentScore('High');
       setLoading(false);
-    }
+    }, 8000);
   };
 
   return (

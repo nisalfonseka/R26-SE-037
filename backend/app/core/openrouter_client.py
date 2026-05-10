@@ -98,10 +98,23 @@ async def openrouter_chat(
                     )
                 content = data["choices"][0]["message"].get("content")
                 if content is None:
-                    raise ValueError(
-                        f"OpenRouter returned null content (model may be unavailable). "
-                        f"Response: {data}"
-                    )
+                    # Reasoning models (e.g. ring-2.6) may return content=null
+                    # if max_tokens was exhausted during the thinking phase.
+                    # Try extracting text from the reasoning field as a last resort.
+                    reasoning = data["choices"][0]["message"].get("reasoning")
+                    finish_reason = data["choices"][0].get("finish_reason", "")
+                    if reasoning and finish_reason == "length":
+                        logger.warning(
+                            "Model returned null content (finish_reason=length). "
+                            "Reasoning model likely hit max_tokens mid-think. "
+                            "Increase max_tokens. Attempting to use partial reasoning text."
+                        )
+                        content = reasoning
+                    else:
+                        raise ValueError(
+                            f"OpenRouter returned null content (model may be unavailable). "
+                            f"Response: {data}"
+                        )
                 return content.strip()
             except (KeyError, IndexError) as exc:
                 raise ValueError(f"Unexpected OpenRouter response shape: {data}") from exc
