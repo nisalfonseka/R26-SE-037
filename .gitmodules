@@ -1,0 +1,9 @@
+[submodule "SinAI-Training"]
+	path = SinAI-Training
+	url = https://github.com/wahallu/SinAI-Training.git
+[submodule "SinhalaJournalLLM"]
+	path = SinhalaJournalLLM
+	url = https://github.com/wahallu/SinhalaJournalLLM.git
+[submodule "manual-dataset"]
+	path = manual-dataset
+	url = https://github.com/nisalfonseka/SinahalaJournalLLM-Sinhala-grammar-corrector-component.git
