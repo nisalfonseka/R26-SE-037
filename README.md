@@ -29,7 +29,7 @@ SinAI is a full-stack AI journalism assistant purpose-built for Sinhala. At its 
 
 | Tool | What it does | Model adapter |
 |---|---|---|
-| Grammar Checker | Fixes grammar, spelling, and punctuation while preserving meaning | `grammar_sinllama_v18` |
+| Grammar Checker | Fixes grammar, spelling, and punctuation while preserving meaning | `grammar_sinllama_v22` |
 | Headline Generator | Writes engaging Sinhala headlines at short / medium / long word bands | `headline_sinllama_v19` |
 | Style Rewriter | Rewrites articles in newspaper styles: formal, sports, youth, editorial, feature | `style_sinllama_v07` |
 | News Summarizer | Abstractive summaries at short / medium / long lengths | `summarization_sinllama_v06` |
@@ -104,9 +104,9 @@ Deployed and running at **[sinai.onrender.com](https://sinai.onrender.com/)** (f
 
 Fine-tunes SinLlama's per-task LoRA adapters and serves them via `serve_sinai.py` on a GPU box (single NVIDIA A40).
 
-| Adapter | Status | Headline result |
+| Adapter | Status | Result |
 |---|---|---|
-| Grammar `v18` | **Deployed** | 84.2% stage2 accuracy, over-correction down to 6.7% (from 33.3% at v13) |
+| Grammar `v22` | **Deployed** | 87.7% stage2 / 80.0% stage3 / 75.0% stage4 accuracy, 6.7% over-correction. `v23` (trained on 6x the data) tested worse on the newest, hardest eval and was not promoted — see [manual-dataset](manual-dataset/) below |
 | Headline `v19` | **Ready to deploy** | Artifact rate cut ~10× (11.2% → 1.1%) vs v18, in-band rate flat (79.7%) |
 | Style `v07` | **Deployed** | 5 newspaper styles: formal, sports, youth, editorial, feature |
 | Summarizer `v06` | **Deployed** | Length-conditioned (short/medium/long), replacing a fixed-length prompt |
@@ -118,7 +118,7 @@ Full run-by-run rationale (completion-only loss, LoRA on MLP not just attention,
 The hand-curated dataset behind the grammar adapter, organized one file per grammar rule (spelling, SOV order, passive/formal register, plural agreement, negation, numerals, sandhi, honorifics, and 10 more) so a specific failure mode can be fixed without disturbing the rest.
 
 - **~4,900 rows** across 18 category files, merged/deduplicated into `cleaned_v6.jsonl` (5,532 rows, built and awaiting its training run).
-- **Three held-out eval sets**: `stage2` (57 sentences), `stage3` (10 paragraphs), `stage4` (36 paragraphs from real news, added specifically to measure over-correction on paragraph-length input — the metric that matters most editorially).
+- **Four held-out eval sets**: `stage2` (57 sentences), `stage3` (10 paragraphs), `stage4` (36 paragraphs from real news), `stage5` (51 cases from 4 more real articles, none of whose corrections overlap the training data — the hardest set, and where change-needed accuracy still tops out around 16% for every version tested).
 - Explicitly measures and optimizes for **over-correction rate**, not just accuracy — a model that "fixes" already-correct text is worse than useless to an editor.
 
 ### 📦 R26-SE-037 (this repo) — original submission
@@ -215,7 +215,7 @@ For just trying the product, no setup is needed — it's live at **[sinai.onrend
 
 ## Roadmap
 
-- **Grammar:** run the `stage4` real-news eval against `v18`/`v19` for a first paragraph-level over-correction number; train on `cleaned_v6.jsonl` (5,532 rows, built but not yet used); check whether fewer epochs closes v18's mild overfitting gap.
+- **Grammar:** diagnose why `v23` (trained on 6x `v18`'s data, including a round targeted at the exact gap) still lost ground on `stage5` — the priority over adding further data volume; work through the pending native-speaker KEEP/DENY calls in `downgrade_audit.md` before the next corpus-driven normalization pass.
 - **Headline:** deploy `v19` in production (currently `v18`) — the inference server needs a restart to pick it up.
 - **Dataset:** resolve the known `stage2`/`stage3` labeling contradiction around නිල/නිළ agreement.
 - **Product:** continue building out the admin analytics surface and strengthening the Chrome extension / Docs add-on parity with the web app.
