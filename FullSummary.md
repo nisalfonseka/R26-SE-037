@@ -1,6 +1,6 @@
 # SinhalaJournal-LLM / SINAI Repository Research Audit
 
-**Snapshot date:** 2026-08-12  
+**Snapshot date:** 2026-08-13<br>
 **Project ID:** R26-SE-037  
 **Scope:** All repositories and research folders under `/Users/nisalfonseka/Documents/GitHub/Research`, including current source code, locally available datasets, experiment logs, documentation, configuration, and relevant Git history.
 
@@ -13,13 +13,13 @@ No repository files were modified while performing the underlying audit. This do
 | Repository | Audited revision/state | Research role |
 |---|---|---|
 | `SinAI-Training` | `86536dd55b40091eb86dc30ee9ac7254133d87ff` | Current model training, evaluation, and GPU inference code |
-| `SinhalaJournalLLM` | Checked-out `e03ee23217e50e564957248a53d256c426d2295b`; two commits behind `origin/main` at audit time | Current SINAI application source |
+| Standalone `SinhalaJournalLLM` | `5524aa06b7b23ed5173030be08ab4271aa4bd826` | Current SINAI application source, including hybrid grammar rule validation and recalibrated evaluation |
 | `manual dataset` | `e7cb04ec35ec653fe103e0a38f1547e1254d822a`, with pre-existing local changes | Grammar datasets, generation scripts, tests, and result logs |
-| `R26-SE-037` | `a66fb47ddb9b8e92b1b679402635e7806260d40e` | Panel/umbrella repository and historical submitted snapshot |
+| `R26-SE-037` | `ab1768fefee13e593cd6c86f5b4848627cb1a1b9`; embedded application submodule at `0e0699c` | Panel/umbrella repository and historical submitted snapshot |
 
 The repositories embedded as `R26-SE-037` submodules duplicate the standalone repositories and are not independent experiments. The umbrella README itself identifies the linked repositories as the continuing work and its own older folders as the submitted snapshot (`README.md:43-68,124-126`).
 
-The checked-out application did not include remote-only commit `324bb23`, which adds optional reference-image upload support. That feature is not treated as part of the audited working tree or as verified deployment.
+The standalone application is newer than the application submodule embedded in `R26-SE-037`. Rule-validation claims in this revision therefore refer to the standalone `SinhalaJournalLLM` checkout at `5524aa0`; they are source-verified but are not automatically claims about the older embedded snapshot or the live deployment.
 
 ---
 
@@ -48,7 +48,7 @@ The checked-out application did not include remote-only commit `324bb23`, which 
 
 | Component | Implementation state | Experimental state | Deployment status |
 |---|---|---|---|
-| Grammar correction | Training/evaluation through v27; backend API, lexicon, chunking, and substitution warnings implemented | Strongest component evidence, with saved logs and current-gold results | Integrated; exact live adapter **NOT FOUND** |
+| Grammar correction | Training/evaluation through v27; backend API, lexicon, chunking, and edit-level hybrid rule validation implemented | Strongest component evidence, including neural/rules/hybrid replay and rule-policy fixtures | Integrated in current source; exact live adapter and validator deployment **NOT FOUND** |
 | Summarization | mT5, extractive, and SinLLaMA v01-v07 scripts implemented | v06 is the latest version with a tracked result artifact; v07 is code/data cleaning only | Integrated; exact live adapter **NOT FOUND** |
 | Style rewriting | Five-style generation, v07-v11 training history, serving/API implemented | No authoritative saved v11 evaluation | Integrated; exact live adapter **NOT FOUND** |
 | Headline generation | v17-v20 trainers/evaluators and backend post-processing implemented | v18-v20 results documented; raw JSON absent; v19 retained as preferred experiment | Integrated; exact live adapter **NOT FOUND** |
@@ -88,6 +88,7 @@ Journalist / student / editor
                  - self-hosted JWT/bcrypt auth
                  - role checks and rate limiting
                  - preprocessing/post-processing
+                 - edit-level grammar rule validation
                  - task history and telemetry
                  - Optimize orchestration
                     |                    |
@@ -145,7 +146,7 @@ Core evidence: `SinhalaJournalLLM/apps/backend-api/app/main.py:21-41`; `app/api/
 
 | Task | Verified flow |
 |---|---|
-| Grammar | Input -> sentence/paragraph chunks -> sequential model calls -> first-line sanitation -> word diff -> suspicious substitution checks -> advisory lexicon/end-form suggestions -> persistence (`grammar_service.py:181-309`) |
+| Grammar | Input -> sentence/paragraph chunks -> sequential model calls -> candidate sanitation -> lossless edit alignment -> hybrid safety/linguistic validation -> selective unsafe-edit reversion -> applied correction diff -> filtered lexicon/end-form suggestions -> persistence and telemetry (`grammar_service.py:328-528`; `rule_validator.py:134-295`) |
 | Headline | Input/category/length -> concurrent candidate generation -> artifact removal -> out-of-band retries -> maximum-length trimming -> deduplication -> persistence (`headline_service.py:107-220`) |
 | Style | Input/tone resolution -> model gateway -> output normalization -> persistence (`style_service.py:16-47`) |
 | Summary | Input/length resolution -> model gateway -> output normalization -> persistence (`summarizer_service.py:16-46`) |
@@ -163,7 +164,7 @@ Implemented stack:
 
 - Llama-3-8B plus `polyglots/SinLlama_v01` and the extended Sinhala tokenizer, merged into `SinLLaMA-merged-base` (`SinAI-Training/work/sinllama/download_model.py:7-25`; `prepare_sinllama_base.py:9-38`).
 - Supervised PEFT/LoRA with 4-bit base loading and completion-only loss from the successful v16 run onward (`train_grammar.py:199-304,449-475`).
-- Backend chunking, sanitation, correction diffing, lexicon suggestions, sentence-final suggestions, and suspicious-substitution warnings (`grammar_service.py:87-148,181-310`).
+- Backend chunking and sanitation followed by model-independent, edit-level rule validation; applied correction diffing; filtered lexicon and sentence-final suggestions; persistence; and validation telemetry (`grammar_service.py:98-273,328-528`; `rule_validator.py:103-295`).
 
 Grammar-specific mT5 and ByT5 implementations are **NOT FOUND**. The mT5 code in `serve_sinai.py` applies to summarization. Historical rule code is a placeholder/mock, not an evaluated research baseline.
 
@@ -340,7 +341,7 @@ Metric interpretation:
 - Token precision/recall/F1 are grapheme-multiset overlap, not edit-level GEC metrics (`test_grammar.py:356-394`).
 - Char-F1 ignores order and can be misleading for reordered text.
 - ROUGE/GLEU are high even on some wrong long sentences because most characters are copied.
-- Dedicated under-correction, F0.5, and edit-level precision/recall/F1 are **NOT FOUND**.
+- The original v27 evaluator did not report standard edit-level GEC scores. The later hybrid replay adds exact whitespace-token edit precision, recall, under-correction, and F0.5 for the same saved 154 predictions; those results are reported in the rule-validation subsection below.
 - Authoritative latency is **NOT FOUND**.
 
 No single model dominates every criterion: v27 leads aggregate and stage5; v26 leads stage4; v25 leads measured untaught-pair transfer. Significance between 66.9% and 66.2% was not tested.
@@ -368,17 +369,115 @@ The exact production adapter is **NOT FOUND**.
 
 Verified trace:
 
-1. `grammar_service.py:219-224` calls `model_generate("grammar", ...)`.
+1. `grammar_service.py:372-387` calls `model_generate("grammar", ...)`, sanitizes the selected candidate, and invokes the validator.
 2. Runtime settings may override `adapters.grammar`; blank means server default (`model_gateway.py:212-237`; `settings_registry.py:94-98`).
-3. The backend posts to the GPU server (`sinllama_loader.py:34-98`).
+3. The backend posts to the GPU server (`sinllama_loader.py:55-82`).
 4. The server scans external adapter folders and selects the highest numeric valid version (`SinAI-Training/work/serve_sinai.py:43-107`).
 5. If discovery fails, its hard-coded grammar fallback is v13 (`:48-53`).
 
 Conflicting documentation says v13 (`SinhalaJournalLLM/README.md:7-12`) or v22 (`manual dataset/README.md:14-18`; `README.md:32,109`). v25-v27 results exist, but adapter directories and runtime database settings are untracked. A live `/tasks` response or database settings snapshot is required.
 
-The production feature is hybrid: model output plus chunking, correction diffing, lexicon suggestions, final-form rules, and substitution warnings. Suspicious substitutions are flagged, not reverted (`grammar_service.py:109-124`; `substitution_guard.py:233-286`).
+The current source is hybrid: the neural candidate is followed by a model-independent validator that can accept an edit, apply it with a warning, or selectively restore its original span. This supersedes the earlier warning-only description. Exact live activation remains unverified because runtime settings and the deployed revision are unavailable.
 
 The shipped gzip lexicon contains 74,561 word rows and metadata for 319,099 processed articles and 44,007,176 tokens. This conflicts with older comments describing approximately 78,537 words and 215,000 articles (`sinhala_lexicon.txt.gz`; `lexicon.py:34-64`).
+
+## Hybrid rule-validation feature
+
+### Motivation, scope, and pipeline position
+
+The feature addresses a different problem from model training. v27 can make contextual corrections, but the failure record includes surname substitution, polarity/register risk, Unicode joiner changes, and broad rewrites. The deterministic layer is therefore a **post-generation safety and explainability wrapper**, not a claim that hand-written rules can replace the neural grammar model (`docs/research/grammar-hybrid-methodology.md:3-7`).
+
+```text
+original chunk
+  -> grammar model candidate
+  -> first-line sanitation and NFC/safe-spacing normalization
+  -> lossless token alignment
+  -> factual and semantic protection
+  -> linguistic/contextual checks
+  -> ACCEPT / SUGGEST / REJECT per changed span
+  -> reconstruct final text, reverting only REJECT spans
+  -> derive applied corrections and safe advisory suggestions
+  -> persist result and record aggregate telemetry
+```
+
+`SinhalaRuleValidator` accepts original/candidate strings plus optional context, newsroom metadata, and protected terms. It does not call SinLLaMA, require a GPU, or depend on a model provider, so the same policy can validate candidates from another model (`rule_validator.py:1-6,103-143`). In the API path it runs after candidate selection/sanitation and before the final correction diff and persistence (`grammar_service.py:372-427,450-526`). A validator exception is logged and **fails open** to the pre-feature neural candidate with `failed_open=true`; this preserves endpoint availability but means monitoring that flag is safety-critical (`grammar_service.py:382-404`).
+
+### Decision policy and selective reconstruction
+
+| Decision | Final automatic text | Policy meaning |
+|---|---|---|
+| `KEEP` | Original | No model edit exists. |
+| `ACCEPT` | Candidate span | The edit passed enabled checks or has reviewed deterministic support. |
+| `SUGGEST` | Candidate span | The edit is applied but carries an editorial warning because the phenomenon is contextual or evidence is incomplete. |
+| `REJECT` | Original span | A high-confidence factual/safety constraint was violated. |
+
+The recalibrated meaning of `SUGGEST` is **warn and apply**, not veto. Alignment is edit-level, so a rejected name, number, URL, email, or polarity mutation does not discard unrelated valid corrections in the same sentence (`rule_validator.py:215-295`; `rule_types.py:167-195`). Overall sentence/chunk status uses severity precedence `REJECT > SUGGEST > ACCEPT > KEEP`, but reconstruction still occurs per edit. Evidence labels `HIGH`, `MEDIUM`, and `LOW` are categorical policy classes, not probabilities; the nullable numeric `confidence` field is retained only for compatibility (`rule_types.py:34-39,90-108`; `schemas/grammar.py:56-65`).
+
+### Rule catalogue and conservative linguistic policy
+
+The registry contains 44 stable IDs: 5 `AUTO`, 22 `CHECK`, 9 `NEURAL`, and 8 `PROTECT` rules (`rule_registry.py:19-66`). Registration does not imply that every rule performs broad automatic correction; several context-sensitive entries exist for stable logging and future reviewed detectors.
+
+| Layer | Implemented behavior | Restraint/limitation |
+|---|---|---|
+| Orthography | NFC and semantics-preserving horizontal spacing; detect ZWJ/ZWNJ signature changes | Combining marks/joiners are not stripped; uncertain joiner edits are applied warnings, not guessed corrections (`orthography.py:12-59`) |
+| Factual protection | Compare repeated numbers/dates/percentages, URLs, and emails as multisets; reject changed protected values | Digit-based protection is deterministic; no claim is made for written-out quantities (`safety_gate.py:13-25,135-142`) |
+| Entity protection | Reject explicit protected metadata, clear surname-identity substitutions, and uppercase Latin acronym substitutions at `HIGH` evidence | Heuristic probable names/entities are `MEDIUM` warnings and remain applied; approved replacement inventory is empty pending reviewed provenance (`rule_validator.py:348-393,508-560`; `approved_replacements.json`) |
+| Polarity | Reject explicit negative-marker addition/removal when the aligned edit touches polarity | Does not attempt general negation generation; quote/bracket punctuation is stripped before comparison (`morphology.py:59-68`) |
+| Ambiguity/context | Warn on the repository's both-valid form pairs, quotation, honorific, deixis, register, tense, voice, passive, and large rewrites | Contextual phenomena remain neural/editorial decisions rather than universal rewrite rules |
+| Morphology/spelling | Use reviewed exact predicate/pronoun data, case-suffix attachment, and shared lexicon evidence | Unknown features stay unknown; corpus frequency is evidence, not authority; no full conjugator is inferred (`morphology.py:20-56`; `agreement.py:18-55`) |
+| Agreement/predicates | Compare person/number/gender only when both features are known; recognize reviewed compounds and the inanimate-plural singular-predicate exception | No full POS tagger, parser, NER model, or morphological analyzer is present |
+
+Hard-rejection precedence is deliberate: number, URL, email, explicit polarity reversal, or `HIGH` entity evidence wins even when the same edit is also inside a quote or changes a joiner. Quote, ZWJ, ambiguous spelling, tense, voice, register, agreement, and edit-size signals remain advisory. Safe one-word edits are not rejected solely because they form a high percentage of a short sentence; large-rewrite detection requires at least four changed lexical tokens **and** more than a 30% changed-token ratio (`rules_high_confidence.json:3-5`; `rule_validator.py:219-231,331-478`).
+
+### API, configuration, persistence, and observability
+
+Seven runtime/admin flags control validation, safe orthography, entity/number/quote protection, agreement checks, and contextual rules; all default to enabled and can be changed without retraining or redeploying the model (`settings_registry.py:136-169`; `.env.example:27-35`).
+
+Backward compatibility is additive:
+
+- `corrected`, `corrections`, and `suggestions` retain their existing roles;
+- `model_candidate` stores the pre-validation neural output;
+- `validation` adds the aggregate decision, fail-open state, stable rule IDs, per-edit offsets/decisions/reasons, evidence levels, and counts (`schemas/grammar.py:68-110,136-175`);
+- applied `corrections` contain only `ACCEPT` or applied `SUGGEST` edits; `REJECT` edits remain visible in validation metadata rather than being misreported as applied corrections (`grammar_service.py:98-159`);
+- legacy lexicon suggestions are filtered so Auto mode cannot bypass protected ambiguity, probable-name, or quoted-span decisions (`grammar_service.py:249-273,477-507`).
+
+Migration `2026-08-12-grammar-rule-validation.sql` adds `model_candidate` and JSONB `validation` to grammar history plus aggregate `grammar_validation` telemetry. Telemetry contains counts, final decision, fail-open state, and rule IDs without duplicating submitted article text (`migrations/2026-08-12-grammar-rule-validation.sql:1-13`; `api/v1/grammar.py:78-105`). The web app, Chrome extension, and Docs add-on continue to receive safe `corrected` output, but direct source search found no dedicated user interface for the new rule explanations or per-edit warning metadata. Thus backend explainability is implemented, while user-facing explanation is still incomplete.
+
+### Post-integration evaluation and analytics
+
+The checked-in evaluator replays the **same 154 saved v27 predictions** (116 correction-needed and 38 clean controls) through four systems. This is a controlled policy comparison with identical neural candidates and requires no GPU; it is not a new model run or an independent blind test (`evaluate_grammar_hybrid.py:386-515`; `docs/research/grammar-hybrid-methodology.md:49-70`). Exact edit metrics use whitespace-token edit sets, and F0.5 weights precision more heavily than recall to match the newsroom safety objective.
+
+| System | Exact | Correction-needed | Preservation | Over-correction | Under-correction | Edit precision | Edit recall | F0.5 | Unsupported entity error | Number error |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Neural v27 | 66.88% | 56.90% | 97.37% | 2.63% | 18.97% | 88.27% | 71.14% | .8422 | .65% | 0% |
+| Rules only | 24.68% | 0% | 100% | 0% | 100% | 0% | 0% | .0000 | 0% | 0% |
+| Legacy hybrid policy | 57.14% | 43.97% | 97.37% | 2.63% | 31.90% | 89.68% | 56.22% | .8014 | 0% | 0% |
+| **Recalibrated hybrid** | **66.88%** | **56.90%** | **97.37%** | **2.63%** | **18.97%** | **88.82%** | **71.14%** | **.8462** | **0%** | **0%** |
+
+Evidence: `HYBRID_GRAMMAR_RECALIBRATED_RESULTS.md:7-53`; `docs/research/v27-hybrid-recalibrated-evaluation.json`.
+
+Measured interpretation:
+
+- Versus neural-only, recalibration preserves exact match, correction-needed accuracy, clean preservation, over-correction, under-correction, and recall. Edit precision rises by **0.55 percentage points** and F0.5 by **0.0040**.
+- The broad legacy “entity error” flag still counts any name-shaped edit, including a gold-supported spelling repair: it falls from 1.30% to .65%. The more defensible **gold-unsupported entity error** falls from .65% to 0%. Number and polarity errors remain 0% in both neural and recalibrated outputs.
+- Versus the legacy hybrid, recalibration gains **9.74 points exact match**, **12.93 points correction-needed exact**, **14.92 points recall**, and **.0448 F0.5**, while edit precision decreases .86 points. The old policy's higher precision came at a large recall cost.
+- Rules-only corrects none of the 116 erroneous inputs and reaches 24.68% exact only by preserving the 38 clean controls. It is a safety lower bound, not a competitive Sinhala grammar corrector.
+
+The policy audit localizes the legacy loss. It identifies **23 candidate-supported edits** that the old hybrid suppressed: 20 `SUGGEST` rollbacks and 3 broad entity `REJECT`s; none resulted from sentence-wide rollback. The recalibrated replay produces 146 `ACCEPT`, 38 applied `SUGGEST`, and 1 `REJECT` decisions across 185 aligned edits. The single hard rejection blocks the candidate identity substitution `ගුනවර්ධන -> ගුණසේකර` while preserving other spelling repairs in that paragraph. The target contains a third form, `ගුණවර්ධන`, so fragment-exact local adjudication cannot classify the block as correct or false; it remains explicitly **unadjudicated**, and hard-block precision must not be claimed from this replay (`false_blocks_old_hybrid.csv`; `hard_blocks_new_hybrid.csv`; `HYBRID_GRAMMAR_RECALIBRATED_RESULTS.md:55-88`).
+
+The replay also shows which active detectors dominate: lexicon evidence triggered 96 times, consonant spelling 89, edit-size warnings 13, vowel length 7, case attachment/suffix/sandhi 5 each, ZWJ 5, tense 5, entity protection 5, ambiguity 4, register 4, and voice/passive 2. Trigger counts overlap because one edit may carry multiple stable rule IDs; they are not prevalence estimates.
+
+A separate 20-case rule-policy suite covers 16 rule IDs. All covered triggers and expected effects match their fixtures, including negative controls for unchanged numbers/polarity and ordinary spelling. Three ZWJ/voice/passive fixtures deliberately have no linguistic gold and are marked `needs_native_review`. These 100% fixture results verify implementation behavior, **not** corpus-wide linguistic accuracy or rule generalization (`tests/data/grammar_rule_eval.jsonl`; `HYBRID_GRAMMAR_RECALIBRATED_RESULTS.md:90-111`).
+
+### Verification and remaining limitations
+
+- Re-executed on 2026-08-13: targeted validator/integration tests, **35 passed**; full backend suite, **470 passed**; fresh v27 replay reproduced the committed Markdown report and both CSV review exports exactly.
+- There is no separate development split for the policy recalibration, and the 154-example benchmark has already influenced multiple project decisions. The replay is strong implementation evidence but not an unbiased estimate of future newsroom performance.
+- The one v27 hard block and all high-risk/contextual rule categories still require native Sinhala linguist or journalist review. Inter-rater agreement is absent.
+- The protected newsroom glossary and approved replacement list are empty by default; deployment-specific metadata is required for the strongest entity protection.
+- No full Sinhala morphological analyzer, POS/dependency parser, or NER model is integrated. Stable IDs for difficult categories must not be misread as implemented automatic correction capability.
+- The migration's execution, live runtime flags, deployed revision, validator latency/throughput, and client-side presentation of warnings are **NOT FOUND**.
+- Fail-open behavior protects availability but temporarily removes the safety benefit during validator faults; `failed_open` telemetry therefore needs an operational alert or dashboard, which is **NOT FOUND**.
 
 ---
 
@@ -671,7 +770,7 @@ Current GPU host/vendor, production CUDA environment, CPU/RAM, topology, energy 
 | Curriculum learning | **NOT FOUND** | Versioned data expansion is not within-run curriculum |
 | Automated hyperparameter optimization | **NOT FOUND** | Changes are manually selected |
 | Multiple-seed selection | **NOT FOUND** |
-| Hybrid model/rule system | Yes | Lexicon, guards, chunking, trimming, fallbacks |
+| Hybrid model/rule system | Yes | Model-independent edit validator with AUTO/CHECK/NEURAL/PROTECT tiers, selective safety reversion, lexicon, chunking, and fallbacks |
 
 The implemented methodology is iterative supervised PEFT/QLoRA over handcrafted, corpus-corrupted, and teacher-generated data. Repeated decisions on the same grammar benchmark create adaptive test-overfitting risk.
 
@@ -681,7 +780,7 @@ The implemented methodology is iterative supervised PEFT/QLoRA over handcrafted,
 
 | Component | Test design | Metrics | Main limitations |
 |---|---|---|---|
-| Grammar | Four stages; 154 total | Exact, change-needed, preservation, over-correction, grapheme ROUGE, GLEU, Char-F1, token overlap | Pair contamination, evolving gold, repeated use, small tests, no external baseline |
+| Grammar | Four stages; 154 saved v27 predictions; neural/rules/legacy-hybrid/recalibrated-hybrid replay; 20 policy fixtures | Exact, change-needed, preservation, over/under-correction, edit precision/recall/F0.5, factual mutation/error, decisions, rule coverage | Pair contamination, evolving/reused gold, small test, no independent external baseline, one unadjudicated hard block |
 | Summary | 15 articles ×3 lengths | Grapheme ROUGE, compression, band adherence, clean ending | Possible leakage, tiny/source-limited sample, no factuality/human metric |
 | Style | Up to 20 held-out articles ×5 | ROUGE, BLEU, TF-IDF cosine, length, markers, custom score | Result absent, longest-item selection, heuristic “accuracy,” serving mismatch |
 | Headline | 300 validation articles ×3 | In-band, artifact, own-band ROUGE/BLEU | Prompt mismatch, changing validation files, stochastic single runs, no blind/human test |
@@ -698,6 +797,7 @@ Important methodological limitations:
 8. Headline evaluation omits part of its training/production prompt.
 9. No uniform baseline comparison exists across all tasks.
 10. Confidence intervals, power analysis, and multi-seed significance are mostly **NOT FOUND**; grammar's Fisher test is the exception.
+11. The rule-policy fixtures test expected software behavior, not real-world rule prevalence or linguistic accuracy; three fixtures intentionally await native review.
 
 ---
 
@@ -802,9 +902,11 @@ Potential contributions, without unverified novelty claims:
 2. Empirical evidence that exact correction-pair exposure strongly predicts grammar success, including a Fisher p=.0014 result in the older audit (`train_roadmap.md:25-58`).
 3. Evidence that target quality may matter more than raw data volume: v23's 9,000 extra rows did not improve generalization, while v10 target repair recovered v25/v26.
 4. A controlled low-rank grammar experiment: v27 r4 improved aggregate/stage5 slightly but did not improve unseen-pair transfer (`train_grammar_v27.py:245-310`).
-5. Length-conditioned Sinhala abstractive summarization with a tracked v06 15×3 evaluation and teacher-data quality audit.
-6. Headline length-conditioning and artifact-cleaning experiments; v19 sharply reduced documented artifacts.
-7. Negative evidence on Sinhala decoding constraints, including grapheme/morphology damage from no-repeat and repetition settings.
+5. A controlled hybrid grammar ablation showing that `SUGGEST`-as-veto loses 14.92 points of edit recall, while a warn-and-apply policy preserves v27 exact/recall and improves F0.5 from .8422 to .8462.
+6. A conservative factual-safety result: gold-unsupported entity error falls from .65% to 0% on the saved v27 replay without reducing exact match or recall; one hard block remains unadjudicated.
+7. Length-conditioned Sinhala abstractive summarization with a tracked v06 15×3 evaluation and teacher-data quality audit.
+8. Headline length-conditioning and artifact-cleaning experiments; v19 sharply reduced documented artifacts.
+9. Negative evidence on Sinhala decoding constraints, including grapheme/morphology damage from no-repeat and repetition settings.
 
 ## Engineering contributions
 
@@ -812,8 +914,9 @@ Potential contributions, without unverified novelty claims:
 2. SinLLaMA/OpenRouter/mock resilient inference gateway.
 3. SINAI web platform with auth, history, admin, telemetry, and Optimize.
 4. Chrome extension and Google Docs integration.
-5. Grammar safeguards: chunking, lexicon, sentence-final checks, entity/substitution warnings.
-6. Headline visual-prompt and image workflow using Groq, OpenAI Images, and optional Cloudinary.
+5. Provider-independent, edit-level Sinhala rule validator with stable rule IDs, categorical evidence, selective reversion, fail-open behavior, configuration, persistence, telemetry, evaluator tooling, and review exports.
+6. Grammar safeguards integrating chunking, lexicon and sentence-final checks without allowing legacy advisory channels to bypass ambiguity/name/quote protection.
+7. Headline visual-prompt and image workflow using Groq, OpenAI Images, and optional Cloudinary.
 
 ---
 
@@ -831,6 +934,9 @@ Potential contributions, without unverified novelty claims:
 | Four epochs best use v10 | v25 | Eval loss rises after epoch 3 | Stop at three epochs |
 | Lower rank forces rule learning | v27 r4 | Untaught 48%, below v25 | Primary hypothesis unsupported |
 | Names act like ordinary spelling errors | v23-v27 | Entity substitution persists | Add preservation data/warnings |
+| Every rule warning should veto a model edit | Legacy hybrid replay | Exact falls 66.88% -> 57.14%; recall 71.14% -> 56.22%; 23 candidate-supported edits suppressed | Apply `SUGGEST` with warning; reserve rollback for `REJECT` |
+| Broad entity heuristics are safe hard blockers | Legacy vs recalibrated policy | Three locally supported entity edits were falsely blocked; one recalibrated hard block remains unadjudicated | Hard-block only explicit metadata, clear identity substitution, or uppercase acronym evidence |
+| Rules can replace the neural corrector | Rules-only replay | 24.68% exact, 0% correction-needed exact, 100% under-correction | Treat rules as a safety lower bound, not a grammar baseline |
 | Dropout0 works in 4-bit summary LoRA | v03 | Unsloth CUDA dtype problem | Restore .05 dropout |
 | Standard no-repeat constraints help Sinhala | Early summary/style | Grapheme/morphology corruption | Remove/relax constraint |
 | Teacher summaries are reliable | v06 corpus | Numeric-unit/glue defects | Add v07 cleaning |
@@ -848,7 +954,7 @@ Potential contributions, without unverified novelty claims:
 
 | Component | Baseline | Best supported model | Dataset size | Primary metric | Best result | Main limitation | Deployment |
 |---|---|---|---:|---|---|---|---|
-| Grammar | v13: 49.1% stage2 exact | v27 aggregate; v25 unseen; v26 stage4 | 36,006 | Exact match | v27 66.9% aggregate, 43.1% stage5, 97.4% preservation; v25 50% unseen | Pair dependence, contamination, copying, names | Integrated; exact adapter **NOT FOUND** |
+| Grammar | v13: 49.1% stage2 exact; rules-only 24.68% aggregate | v27 neural model plus recalibrated safety validator; v25 best unseen; v26 best stage4 | 36,006 train; 154 replay | Exact plus edit P/R/F0.5 and factual safety | Hybrid 66.88% exact, 88.82% edit precision, 71.14% recall, .8462 F0.5, 0% unsupported entity/number error; v25 50% unseen | Pair dependence, contamination, reused test, incomplete linguistic resources, one unadjudicated block | Integrated in source; exact adapter/live validator **NOT FOUND** |
 | Summarization | Extractive/mT5 result **NOT FOUND** | v06 | 35,569 documented | Grapheme ROUGE-L and adherence | .6163 short/.5789 medium/.5489 long; N=15 each | Possible leakage, tiny source-limited sample, factual errors | Integrated; exact adapter **NOT FOUND** |
 | Style | Authoritative baseline **NOT FOUND** | **NOT FOUND**; v11 latest recipe | 7,555 documented | Authoritative completed metric **NOT FOUND** | Prototype only; not final evidence | Missing artifact, synthetic labels, factual errors, prompt mismatch | Integrated; exact adapter **NOT FOUND** |
 | Headline | v15 embedded comparison | v19 | “48K”; exact split **NOT FOUND** | Artifact and band adherence | 1.1% artifact, 79.7% in-band, R1 .134/RL .130 | Raw results absent, prompt mismatch, no blind/human/factual test | Integrated; exact adapter **NOT FOUND** |
@@ -864,6 +970,8 @@ Potential contributions, without unverified novelty claims:
 - Grammar dataset lineage, counts, categories, corruption rules, and staged tests.
 - Grammar v13-v27 experiment chronology.
 - Current-gold v24-v27 results and detailed v27 metrics.
+- Hybrid grammar architecture, decision semantics, stable rule policy, and additive API/persistence design.
+- Reproducible v27 neural/rules/legacy/recalibrated replay, edit-level metrics, policy audit, and rule fixtures—with the documented adjudication caveats.
 - Grammar memorization, target-quality, schedule, and rank negative findings.
 - v06 summarization configuration and tracked result JSON.
 - v06/v07 teacher-data quality findings.
@@ -884,6 +992,9 @@ Potential contributions, without unverified novelty claims:
 - v08/v09 style losses retained only in comments.
 - Chrome/Docs publication status.
 - Whether uncommitted grammar curation will define a future dataset/version.
+- Whether the rule-validation migration and all default flags are active in the live backend.
+- Whether clients will expose rule reasons, blocked edits, and advisory warnings to users.
+- Native review of the one v27 hard block and the ZWJ/voice/passive policy fixtures.
 
 ## STILL MISSING
 
@@ -895,9 +1006,8 @@ Potential contributions, without unverified novelty claims:
 - SUS/Likert instruments, participant counts, consent, and ethics evidence.
 - Inter-rater agreement.
 - Statistical significance, confidence intervals, and repeated seeds.
-- Standard GEC edit precision/recall/F0.5.
 - BERTScore and stronger semantic/factual metrics.
-- Entity/number consistency tests.
+- Independent entity/number/polarity consistency tests beyond the reused v27 replay and policy fixtures.
 - Production latency, throughput, and resource benchmarks.
 - Full hardware/software lockfiles for generative experiments.
 - CPU/RAM/energy reporting.
@@ -972,6 +1082,12 @@ Paths below are relative to the workspace root unless noted.
 - `manual dataset/Tested_results/v27 trainlog.md` — latest grammar environment/loss.
 - `manual dataset/Tested_results/v26 adap reults.md` — v26 result.
 - `manual dataset/Tested_results/v25 adapter training logs.md` — v25 over-training evidence.
+- `SinhalaJournalLLM/apps/backend-api/scripts/evaluate_grammar_hybrid.py` — reproducible neural/rules/legacy/recalibrated replay, edit metrics, coverage, and review exports.
+- `SinhalaJournalLLM/apps/backend-api/tests/data/grammar_rule_eval.jsonl` — 20 dedicated rule-policy fixtures with native-review markers.
+- `SinhalaJournalLLM/docs/research/v27-hybrid-recalibrated-evaluation.json` — machine-readable 154-example hybrid evaluation.
+- `SinhalaJournalLLM/HYBRID_GRAMMAR_RECALIBRATED_RESULTS.md` — measured comparison and policy analysis.
+- `SinhalaJournalLLM/false_blocks_old_hybrid.csv` — 23 locally supported legacy false blocks.
+- `SinhalaJournalLLM/hard_blocks_new_hybrid.csv` — one recalibrated hard block awaiting adjudication.
 - `SinAI-Training/summarizer/abstractive/6_test_summarizer.py` — v06 evaluation.
 - `SinAI-Training/summarizer/6_eval_results/v06_eval_20260726_025630.json` — tracked generative result.
 - `SinAI-Training/work/sinllama/scripts/test_style.py` — style evaluation design; result absent.
@@ -990,6 +1106,12 @@ Paths below are relative to the workspace root unless noted.
 - `SinhalaJournalLLM/apps/backend-api/app/core/database.py` — actual PostgREST access.
 - `SinhalaJournalLLM/apps/backend-api/app/core/auth.py` — current auth architecture.
 - `SinhalaJournalLLM/apps/backend-api/app/services/grammar/grammar_service.py` — grammar production pipeline.
+- `SinhalaJournalLLM/apps/backend-api/app/services/grammar/rule_validator.py` — provider-independent edit alignment, classification, and selective reconstruction.
+- `SinhalaJournalLLM/apps/backend-api/app/services/grammar/rule_types.py` — decisions, tiers, evidence classes, edit/result structures, and counts.
+- `SinhalaJournalLLM/apps/backend-api/app/services/grammar/rule_registry.py` — authoritative 44-ID rule catalogue.
+- `SinhalaJournalLLM/apps/backend-api/app/services/grammar/safety_gate.py` — lossless tokenization and protected factual counters.
+- `SinhalaJournalLLM/apps/backend-api/app/services/grammar/{orthography,morphology,agreement,contextual_rules}.py` — conservative linguistic evidence and diagnostics.
+- `SinhalaJournalLLM/apps/backend-api/migrations/2026-08-12-grammar-rule-validation.sql` — additive history and telemetry schema.
 - `SinhalaJournalLLM/apps/backend-api/app/services/grammar/substitution_guard.py` — entity/substitution warnings.
 - `SinhalaJournalLLM/apps/backend-api/app/services/headline/headline_service.py` — retries and band enforcement.
 - `SinhalaJournalLLM/apps/backend-api/app/services/headline/visual_prompt_service.py` — Groq visual prompts.
@@ -1015,6 +1137,10 @@ Paths below are relative to the workspace root unless noted.
 - `manual dataset/train_roadmap.md` — grammar rationale, contamination, and negative results.
 - `manual dataset/stage5_manifest.md` — hardest-test construction.
 - `manual dataset/downgrade_audit.md` — pending linguistic adjudication.
+- `SinhalaJournalLLM/docs/grammar-rule-validation.md` — architecture, decisions, catalogue, configuration, and deployment commands.
+- `SinhalaJournalLLM/HYBRID_GRAMMAR_RULE_POLICY.md` — concise post-recalibration rule policy.
+- `SinhalaJournalLLM/docs/research/grammar-hybrid-methodology.md` — research framing, ablation design, and limitations.
+- `SinhalaJournalLLM/docs/research/rule-policy-recalibration.md` — legacy false-block diagnosis and final policy change.
 - `SinhalaJournalLLM/infra/README.md` — older Coolify/self-hosted deployment design.
 - `R26-SE-037/Initial work/` — historical submitted implementation, not current SINAI architecture.
 
@@ -1024,10 +1150,10 @@ Paths below are relative to the workspace root unless noted.
 
 The latest README model tables are not authoritative. The latest repository evidence is:
 
-- **Grammar:** v27 trained/evaluated; best aggregate exact match 66.9%. v25 retains the highest measured unseen-pair result at 50%.
+- **Grammar:** v27 remains the best aggregate neural model at 66.9% exact; v25 retains the highest measured unseen-pair result at 50%. The recalibrated validator preserves v27's 66.88% exact and 71.14% edit recall, increases edit precision from 88.27% to 88.82% and F0.5 from .8422 to .8462, and reduces gold-unsupported entity error from .65% to 0% on the saved 154-example replay.
 - **Summarization:** v07 code/cleaning is latest, but v06 is the latest model with a tracked evaluation artifact.
 - **Style:** v11 is the latest recipe, but no authoritative completed v11 result is present.
 - **Headline:** v20 is the latest experiment; v19 is the repository's preferred documented model.
-- **Production:** exact installed adapters remain **NOT FOUND** because the server scans an external adapter filesystem and runtime database overrides are unavailable.
+- **Production:** hybrid rule validation is integrated and fully tested in the current standalone backend source. Exact installed adapters, deployed revision, migration state, runtime validation flags, and live client presentation remain **NOT FOUND**.
 
 Accordingly, the paper must distinguish **latest experiment**, **best experimentally supported model**, **application integration**, and **verified production deployment**. They are not interchangeable in the current repositories.

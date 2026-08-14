@@ -14,8 +14,8 @@ from crawl4ai.async_configs import BrowserConfig, CrawlerRunConfig
 SOURCE     = "sinhala_adaderana"
 BASE_URL   = "https://sinhala.adaderana.lk/news"
 
-START_ID   = 121924
-END_ID     = 171924
+START_ID   = 222116
+END_ID     = 230167
 
 OUTPUT_DIR    = "output"
 PROGRESS_FILE = "sinhala_scrape_progress.json"
