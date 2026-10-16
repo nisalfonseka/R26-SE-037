@@ -1,237 +1,485 @@
 # SinAI — SinhalaJournal-LLM
 
-> **R26-SE-037** · *A Style-Controlled Large Language Model for Diverse Sri Lankan Newspaper Writing*
-> An AI writing assistant for Sinhala journalism, built on **SinLlama** (Llama-3-8B extended for Sinhala, fine-tuned with per-task LoRA adapters) — grammar correction, headline generation, style rewriting, and news summarization, in Sinhala.
+**Research project R26-SE-037 · Sri Lanka Institute of Information Technology**
 
-**🔴 Live app:** **[sinai.onrender.com](https://sinai.onrender.com/)**
+SinAI is an AI-assisted writing system for Sinhala journalism. It provides four
+editorial tools through a web application, Chrome extension, and Google Docs
+add-on:
 
----
+| Tool | Purpose |
+|---|---|
+| Grammar checker | Correct Sinhala grammar, spelling, and punctuation while preserving meaning |
+| Headline generator | Generate short, medium, or long Sinhala headlines |
+| Style rewriter | Rewrite an article in formal, sports, youth, editorial, or feature style |
+| News summarizer | Produce short, medium, or long Sinhala summaries |
 
-## Table of Contents
+The system uses a shared SinLlama base model with a separate LoRA adapter for
+each task. A FastAPI model gateway can use the research GPU server, a configured
+hosted fallback, or a deterministic mock provider for local development.
 
-- [Overview](#overview)
-- [Repository Structure](#repository-structure)
-- [Component Status](#component-status)
-- [Architecture](#architecture)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [API Reference](#api-reference)
-- [Getting Started](#getting-started)
-- [Roadmap](#roadmap)
+> SinAI is research software. Review generated text before publication,
+> especially names, quotations, numbers, and factual claims.
+
+## Quick links
+
+- **Research website:** [sin-ai.app](https://sin-ai.app/)
+- **Try the web application:** [chat.sin-ai.app](https://chat.sin-ai.app/)
+- **API health:** [backend.sin-ai.app/health](https://backend.sin-ai.app/health)
+- **API capabilities:** [backend.sin-ai.app/api/v1/meta](https://backend.sin-ai.app/api/v1/meta)
+- **Detailed project summary:** [FullSummary.md](FullSummary.md)
+- **Questions and bug reports:** [GitHub Issues](https://github.com/nisalfonseka/R26-SE-037/issues)
+
+## Contents
+
+- [Start here](#start-here)
+- [Repository structure](#repository-structure)
+- [Clone the complete project](#clone-the-complete-project)
+- [Frontend-only development](#frontend-only-development)
+- [Full local development](#full-local-development)
+- [Try the API directly](#try-the-api-directly)
+- [Model training and GPU inference](#model-training-and-gpu-inference)
+- [Grammar datasets and evaluation](#grammar-datasets-and-evaluation)
+- [Tests](#tests)
+- [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
-- [License](#license)
+- [Citation and use](#citation-and-use)
 
----
+## Start here
 
-## Overview
+Choose the path that matches what you want to do:
 
-SinAI is a full-stack AI journalism assistant purpose-built for Sinhala. At its core is **SinLlama**, a Llama-3-8B checkpoint extended with a Sinhala tokenizer and fine-tuned separately for four editorial tasks via LoRA adapters, so each task gets a small, targeted adapter on a shared base model rather than one generalist model doing all four jobs badly:
+| Goal | Recommended path |
+|---|---|
+| Try SinAI without installing anything | Open the [live web application](https://chat.sin-ai.app/) |
+| Work on the React interface | Follow [Frontend-only development](#frontend-only-development) |
+| Run the API and web app locally | Follow [Full local development](#full-local-development) |
+| Explore or train the language models | Read [Model training and GPU inference](#model-training-and-gpu-inference) |
+| Inspect the grammar datasets and evaluations | Open [`manual-dataset/`](manual-dataset/) |
+| Read the original submitted prototype | Open [`Initial work/`](Initial%20work/) |
 
-| Tool | What it does | Model adapter |
+## Repository structure
+
+This repository is the public entry point for the research project. The active
+product, model-training workspace, and grammar dataset retain their own Git
+histories and are included here as submodules.
+
+```text
+R26-SE-037/
+├── README.md
+├── FullSummary.md              # detailed technical and research summary
+├── Initial work/               # original self-contained submission snapshot
+├── SinAI-Training/             # model training, evaluation, and GPU inference
+├── SinhalaJournalLLM/          # active product and deployment code
+└── manual-dataset/             # grammar datasets, audits, and evaluation tools
+```
+
+| Directory | Upstream repository | Main contents |
 |---|---|---|
-| Grammar Checker | Fixes grammar, spelling, and punctuation while preserving meaning | `grammar_sinllama_v22` |
-| Headline Generator | Writes engaging Sinhala headlines at short / medium / long word bands | `headline_sinllama_v19` |
-| Style Rewriter | Rewrites articles in newspaper styles: formal, sports, youth, editorial, feature | `style_sinllama_v07` |
-| News Summarizer | Abstractive summaries at short / medium / long lengths | `summarization_sinllama_v06` |
+| [`SinhalaJournalLLM/`](SinhalaJournalLLM/) | [wahallu/SinhalaJournalLLM](https://github.com/wahallu/SinhalaJournalLLM) | FastAPI backend, React web app, Chrome extension, Docs add-on, portfolio, infrastructure |
+| [`SinAI-Training/`](SinAI-Training/) | [wahallu/SinAI-Training](https://github.com/wahallu/SinAI-Training) | SinLlama setup, LoRA training, evaluation scripts, GPU inference server |
+| [`manual-dataset/`](manual-dataset/) | [nisalfonseka/SinahalaJournalLLM-Sinhala-grammar-corrector-component](https://github.com/nisalfonseka/SinahalaJournalLLM-Sinhala-grammar-corrector-component) | Curated grammar data, held-out tests, audit scripts, experiment records |
+| [`Initial work/`](Initial%20work/) | This repository | Earlier backend, frontend, data pipeline, models, and scrapers retained for research history |
 
-An **Optimize Article** flow chains all four in one pass — correct, headline, optionally restyle, optionally summarize — for the common case of taking a raw draft to publish-ready in one step.
+The submodule commits recorded by this repository are the reproducible project
+snapshot. The upstream repositories can move ahead independently.
 
-The product ships to journalists through three surfaces: a **web app**, a **Chrome extension**, and a **Google Docs add-on**, all talking to the same backend API.
+## Clone the complete project
 
----
-
-## Repository Structure
-
-The project now spans four repositories. This repo (`R26-SE-037`) is the one submitted to the research panel; it also acts as a single entry point over the others via **git submodules**, so the whole project can be cloned and browsed from one place without merging separate histories or disturbing anyone's deploy integrations.
-
-```
-R26-SE-037/                    ← this repo (panel submission + container)
-│
-├── backend/                   ← original submitted implementation (FastAPI)
-├── frontend/                  ← original submitted implementation (React)
-├── data/, models/, scripts/   ← original data pipeline & training scripts
-├── Scrappers/                 ← original news scrapers
-├── docs/                      ← project documentation
-│
-├── SinAI-Training/            ← [submodule] → github.com/wahallu/SinAI-Training
-│                                  Active model training & fine-tuning, GPU server
-│
-├── SinhalaJournalLLM/         ← [submodule] → github.com/wahallu/SinhalaJournalLLM
-│                                  Active product: backend-api, web-app, Chrome
-│                                  extension, Docs add-on — deployed to Render
-│
-└── manual-dataset/            ← [submodule] → github.com/nisalfonseka/
-                                   SinahalaJournalLLM-Sinhala-grammar-corrector-component
-                                   Hand-curated grammar correction dataset & evals
-```
-
-**`backend/`, `frontend/`, `data/`, `models/`, `scripts/`, `Scrappers/`** are this repo's own tracked content — the implementation as submitted to the panel. Work has continued since in the three linked repos below, which is where the current, deployed system actually lives.
-
-### Cloning with submodules
+Clone with submodules so the three linked repositories are populated:
 
 ```bash
 git clone --recurse-submodules https://github.com/nisalfonseka/R26-SE-037.git
+cd R26-SE-037
+```
 
-# already cloned without the flag?
+If you already cloned the repository and the submodule folders are empty:
+
+```bash
 git submodule update --init --recursive
 ```
 
-### Keeping submodules current
-
-The submodule pointers are pinned to a commit, not a moving branch — they don't update automatically when the linked repos get new commits.
+To restore every submodule to the exact version recorded by this repository:
 
 ```bash
-git submodule update --remote --merge   # pull latest on each submodule's default branch
-git add SinAI-Training SinhalaJournalLLM manual-dataset
-git commit -m "Sync submodules"
+git submodule update --init --recursive --checkout
 ```
 
----
+## System overview
 
-## Component Status
-
-### 🚀 SinhalaJournalLLM — the live product
-
-Deployed and running at **[sinai.onrender.com](https://sinai.onrender.com/)** (frontend + backend, both on Render).
-
-- **`apps/backend-api`** — FastAPI service behind all four tools plus `Optimize`, self-hosted authentication (own JWT issuance, no third-party auth dependency), per-user history, and an admin dashboard API (users, categories, runtime settings, token-usage analytics, audit activity).
-- **`apps/web-app`** — React 19 + Vite + Tailwind SPA: the four tools, Optimize Article, dashboard, history, settings, and an `/admin` console.
-- **`apps/chrome-extension`** — Manifest V3 extension (popup + inline assistant + context menus) for correcting text anywhere in the browser.
-- **`apps/docs-addon`** — Google Docs sidebar (Apps Script) that calls the backend server-side.
-- Every inference request goes through a provider chain — **SinLlama (GPU) → OpenRouter (hosted fallback) → mock** — so the product degrades gracefully instead of failing outright if the GPU box is down; responses report which provider actually served them.
-
-### 🧠 SinAI-Training — model training
-
-Fine-tunes SinLlama's per-task LoRA adapters and serves them via `serve_sinai.py` on a GPU box (single NVIDIA A40).
-
-| Adapter | Status | Result |
-|---|---|---|
-| Grammar `v22` | **Deployed** | 87.7% stage2 / 80.0% stage3 / 75.0% stage4 accuracy, 6.7% over-correction. `v23` (trained on 6x the data) tested worse on the newest, hardest eval and was not promoted — see [manual-dataset](manual-dataset/) below |
-| Headline `v19` | **Ready to deploy** | Artifact rate cut ~10× (11.2% → 1.1%) vs v18, in-band rate flat (79.7%) |
-| Style `v07` | **Deployed** | 5 newspaper styles: formal, sports, youth, editorial, feature |
-| Summarizer `v06` | **Deployed** | Length-conditioned (short/medium/long), replacing a fixed-length prompt |
-
-Full run-by-run rationale (completion-only loss, LoRA on MLP not just attention, length-conditioning, artifact cleaning) is in that repo's `train_roadmap.md` and `CLAUDE.md`.
-
-### 📚 manual-dataset — grammar training data
-
-The hand-curated dataset behind the grammar adapter, organized one file per grammar rule (spelling, SOV order, passive/formal register, plural agreement, negation, numerals, sandhi, honorifics, and 10 more) so a specific failure mode can be fixed without disturbing the rest.
-
-- **~4,900 rows** across 18 category files, merged/deduplicated into `cleaned_v6.jsonl` (5,532 rows, built and awaiting its training run).
-- **Four held-out eval sets**: `stage2` (57 sentences), `stage3` (10 paragraphs), `stage4` (36 paragraphs from real news), `stage5` (51 cases from 4 more real articles, none of whose corrections overlap the training data — the hardest set, and where change-needed accuracy still tops out around 16% for every version tested).
-- Explicitly measures and optimizes for **over-correction rate**, not just accuracy — a model that "fixes" already-correct text is worse than useless to an editor.
-
-### 📦 R26-SE-037 (this repo) — original submission
-
-The `backend/`, `frontend/`, `data/`, `models/`, `scripts/`, and `Scrappers/` folders are the implementation as it stood when submitted to the research panel — an earlier, self-contained snapshot of the same idea. They're kept as-is for the record; new work happens in the three repos above.
-
----
-
-## Architecture
-
-```
-                    Chrome ext ──┐
-                    Docs add-on ─┼─→  backend-api  ──→  model gateway
-                    web-app ─────┘   (FastAPI,          (chain, first
-                                      self-hosted         healthy wins)
-                                      JWT auth)                │
-                                        │            ┌─────────┼──────────┐
-                                        ▼            ▼         ▼          ▼
-                                   PostgreSQL   SinLlama   OpenRouter    mock
-                                  (history,     (GPU box,   (hosted      (offline,
-                                   users,        adapters   fallback)     rule-based)
-                                   admin/audit)  v18/v19/
-                                                 v07/v06)
+```text
+Web app ───────────┐
+Chrome extension ──┼──> FastAPI backend ──> model gateway ──> SinLlama GPU
+Google Docs add-on ┘          │                    ├────────> hosted fallback
+                              │                    └────────> mock provider
+                              v
+                       Supabase Postgres
+                   auth, history, plans, audit data
 ```
 
-- **web-app**, the **Chrome extension**, and the **Docs add-on** all call the same `backend-api`; the four writing tools also accept anonymous requests (rate-limited by IP, not persisted) so the extension and add-on don't need a login flow.
-- **backend-api** owns auth (its own JWT issuance — no third-party auth service), per-user history, and the admin dashboard API, and is what's actually deployed at [sinai.onrender.com](https://sinai.onrender.com/).
-- **Model gateway** tries SinLlama on the GPU box first, falls back to OpenRouter, then a rule-based mock — every response reports which provider actually served it.
+- `apps/backend-api` is the common API for every client.
+- `apps/web-app` is the main React workspace.
+- The model gateway reports which inference provider served a request.
+- Anonymous tool requests are supported but rate-limited and are not stored in
+  personal history.
+- Signed-in users can reopen saved work; administrators have separate
+  management and research-diagnostics routes.
 
----
+## Prerequisites
 
-## Features
+Only install what your chosen path needs:
 
-- 🔤 **Grammar Checker** — corrected text plus a per-correction breakdown (position, original, corrected, rule applied)
-- 📰 **Headline Generator** — ranked candidates at short/medium/long word bands, with out-of-band regeneration and trimming as a hard guarantee
-- ✍️ **Style Rewriter** — formal, sports, youth, editorial, feature
-- 📋 **News Summarizer** — short/medium/long abstractive summaries
-- ⚡ **Optimize Article** — runs grammar → headline → optional restyle → optional summary in one pass
-- 📊 **Dashboard & History** — unified activity feed across all tools, per-user
-- 🛠️ **Admin console** — users, categories, runtime settings, token-usage analytics, audit log
-- 🧩 **Chrome extension** and **Google Docs add-on** — the same tools, without leaving the page you're writing in
-
----
-
-## Tech Stack
-
-| Layer | Technology |
+| Purpose | Requirement |
 |---|---|
-| Backend | FastAPI, SQLAlchemy (async) + asyncpg, PostgreSQL, Pydantic v2, httpx |
-| Frontend | React 19, Vite, Tailwind CSS 4, Radix UI, Lucide icons |
-| Model training | Unsloth + TRL `SFTTrainer`, LoRA fine-tuning on Llama-3-8B, 4-bit quantization |
-| Inference serving | FastAPI (`serve_sinai.py`), PEFT multi-adapter switching on a shared merged base |
-| Auth | Self-hosted JWT (own issuance, no third-party auth dependency) |
-| Deployment | Render (backend-api + web-app), GPU box for model serving |
-| Browser/Docs clients | Chrome Manifest V3, Google Apps Script |
+| Clone the complete repository | Git with submodule support |
+| Run the web application | Node.js 20+ and npm |
+| Run the backend | Python 3.12 and a Supabase project |
+| Run with containers | Docker with Compose v2 |
+| Run the real SinLlama models | Linux, an NVIDIA CUDA GPU, model access, and substantial local storage |
 
----
+The real model weights and trained task-adapter folders are intentionally not
+stored in this Git repository. The frontend and backend can still be developed
+with the mock provider.
 
-## API Reference
+## Frontend-only development
 
-All endpoints are served by `backend-api` (the same service running at `sinai.onrender.com`).
+This is the quickest local setup. It runs the current React interface and uses
+the public SinAI API by default, so no local Python environment or model weights
+are required.
 
-| Endpoint | Method | Purpose |
+```bash
+cd SinhalaJournalLLM/apps/web-app
+npm ci
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173).
+
+Useful checks:
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+The public service is shared and rate-limited. Use a local backend when changing
+API behaviour or running repeated tests.
+
+## Full local development
+
+The easiest full-stack development mode uses Supabase for PostgreSQL and auth
+data, the FastAPI backend locally, and `MODEL_PROVIDER=mock`. This exercises the
+application without downloading the multi-gigabyte model stack.
+
+### 1. Prepare Supabase
+
+Create a development Supabase project. Do not use production credentials for
+local experiments.
+
+In the Supabase SQL editor:
+
+1. Run [`apps/backend-api/schema.sql`](SinhalaJournalLLM/apps/backend-api/schema.sql).
+2. Run every file in [`apps/backend-api/migrations/`](SinhalaJournalLLM/apps/backend-api/migrations/) in filename order.
+3. Only if you need an administrator account, review
+   [`apps/backend-api/scripts/seed_admin.sql`](SinhalaJournalLLM/apps/backend-api/scripts/seed_admin.sql)
+   before running it.
+
+Read the header comments in each migration before running it. Many migrations
+are additive and idempotent, but the self-hosted-auth migration is a one-time
+operation that rewrites user-related foreign keys. Take a database backup before
+running migrations against an existing environment.
+
+### 2. Configure and start the backend
+
+```bash
+cd SinhalaJournalLLM/apps/backend-api
+cp .env.example .env
+python3 -m venv .venv
+source .venv/bin/activate        # Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Set at least these values in `apps/backend-api/.env`:
+
+```dotenv
+PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVER_ONLY_SERVICE_ROLE_KEY
+JWT_SECRET=YOUR_LONG_RANDOM_SECRET
+IP_HASH_SALT=ANOTHER_LONG_RANDOM_SECRET
+MODEL_PROVIDER=mock
+MODEL_FALLBACK=true
+APP_ENV=development
+APP_BASE_URL=http://localhost:5173
+CORS_ORIGINS=http://localhost:5173
+```
+
+Generate secrets locally rather than reusing passwords:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(64))"
+```
+
+Start the API:
+
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+
+Verify it:
+
+```bash
+curl http://localhost:8000/health
+curl http://localhost:8000/api/v1/meta
+```
+
+Interactive API documentation is available at
+[http://localhost:8000/docs](http://localhost:8000/docs).
+
+Never expose `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, provider API keys, or
+SMTP credentials in browser code, screenshots, issues, or commits.
+
+### 3. Start the web application
+
+In a second terminal:
+
+```bash
+cd SinhalaJournalLLM/apps/web-app
+npm ci
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173), then set the API Base URL
+in the app's Settings page to:
+
+```text
+http://localhost:8000/api/v1
+```
+
+### 4. Optional Docker Compose workflow
+
+After creating `apps/backend-api/.env`, run from `SinhalaJournalLLM/`:
+
+```bash
+docker compose -f infra/docker-compose.yml up
+```
+
+The frontend is exposed on port `5173` and the backend on port `8000`. If the
+frontend still targets the public API, set its API Base URL to the local URL in
+the Settings page.
+
+## Try the API directly
+
+The liveness and capability endpoints do not require authentication:
+
+```bash
+curl https://backend.sin-ai.app/health
+curl https://backend.sin-ai.app/api/v1/meta
+```
+
+The four main writing endpoints are available under `/api/v1`:
+
+| Method | Endpoint | Purpose |
 |---|---|---|
-| `/grammar/check` | POST | `{text}` → corrected text + word-level corrections |
-| `/grammar/history`, `/grammar/{id}` | GET | Correction history |
-| `/headlines/generate` | POST | `{text, count, category, length}` → ranked candidates in the requested word band |
-| `/headlines/history` | GET | Generation history |
-| `/rewrite` | POST | `{text, tone}` → rewrite in a trained style |
-| `/rewrite/history` | GET | Rewrite history |
-| `/summarize` | POST | `{text, length}` → short/medium/long summary |
-| `/summarize/history` | GET | Summary history |
-| `/history` | GET | Unified newest-first activity across all tools |
-| `/meta` | GET | Supported tasks, styles, lengths, provider status, feature flags |
-| `/health`, `/health/model` | GET | Liveness / model gateway status |
-| `/admin/*` | various | Admin dashboard API (requires an admin account) |
+| `POST` | `/grammar/check` | Grammar and spelling correction |
+| `POST` | `/headlines/generate` | Controlled-length headline generation |
+| `POST` | `/rewrite` | Newspaper-style rewriting |
+| `POST` | `/summarize` | Controlled-length summarization |
+| `POST` | `/optimize` | Combined editorial workflow |
+| `GET` | `/meta` | Supported tasks, styles, lengths, and provider status |
 
-The four writing-tool endpoints accept anonymous requests (rate-limited by IP, results not saved); `/*/history` and `/admin/*` require a session.
+Example anonymous grammar request:
 
----
+```bash
+curl -X POST https://backend.sin-ai.app/api/v1/grammar/check \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"මෙහි පරීක්ෂා කිරීමට අවශ්‍ය සිංහල පාඨය යොදන්න."}'
+```
 
-## Getting Started
+Anonymous use is rate-limited. See the local Swagger documentation for the
+complete request and response schemas.
 
-Each submodule owns its own setup instructions — they're the source of truth and change independently of this file:
+## Model training and GPU inference
 
-- **Product (backend-api / web-app / extension / docs add-on):** [`SinhalaJournalLLM/README.md`](SinhalaJournalLLM/README.md)
-- **Model training / inference server:** [`SinAI-Training/CLAUDE.md`](SinAI-Training/CLAUDE.md)
-- **Grammar dataset & eval scripts:** [`manual-dataset/README.md`](manual-dataset/README.md)
-- **This repo's original submitted implementation:** see [`backend/`](backend/) and [`frontend/`](frontend/) — setup is the standard `pip install -r requirements.txt` / `npm install` for a FastAPI + Vite app.
+The model workspace is [`SinAI-Training/`](SinAI-Training/). Its scripts cover
+base-model preparation, LoRA fine-tuning, evaluation, and multi-adapter serving.
 
-For just trying the product, no setup is needed — it's live at **[sinai.onrender.com](https://sinai.onrender.com/)**.
+Important limitations before starting:
 
----
+- The task-adapter weights are not committed to Git.
+- The initial download script obtains the Llama base, SinLlama adapter, and
+  extended tokenizer; task adapters must be trained or supplied separately.
+- Several research scripts contain paths from the original GPU server. Review
+  and change them for your environment before running.
+- Training and real inference require CUDA-compatible hardware. The research
+  environment used an NVIDIA A40; requirements vary by task and configuration.
 
-## Roadmap
+Initial model preparation:
 
-- **Grammar:** diagnose why `v23` (trained on 6x `v18`'s data, including a round targeted at the exact gap) still lost ground on `stage5` — the priority over adding further data volume; work through the pending native-speaker KEEP/DENY calls in `downgrade_audit.md` before the next corpus-driven normalization pass.
-- **Headline:** deploy `v19` in production (currently `v18`) — the inference server needs a restart to pick it up.
-- **Dataset:** resolve the known `stage2`/`stage3` labeling contradiction around නිල/නිළ agreement.
-- **Product:** continue building out the admin analytics surface and strengthening the Chrome extension / Docs add-on parity with the web app.
+```bash
+cd SinAI-Training/work/sinllama
+python download_model.py
+python prepare_sinllama_base.py
+```
 
----
+Update the absolute path constants in `prepare_sinllama_base.py` before running
+it outside the original research server.
+
+Run the inference service from the `work` directory because its imports are
+relative to that location:
+
+```bash
+cd ..
+uvicorn serve_sinai:app --host 0.0.0.0 --port 8001
+```
+
+Then configure the product backend:
+
+```dotenv
+MODEL_PROVIDER=sinllama
+SINLLAMA_API_URL=http://localhost:8001
+MODEL_FALLBACK=true
+```
+
+Before training, read [`SinAI-Training/CLAUDE.md`](SinAI-Training/CLAUDE.md).
+It documents the active scripts, prompt formats, adapter discovery, 4-bit
+loading constraints, and known environment-specific paths.
+
+## Grammar datasets and evaluation
+
+The grammar component lives in [`manual-dataset/`](manual-dataset/). It contains
+rule-organized JSONL data, merged training sets, held-out evaluations, audit
+tools, and experiment reports.
+
+Start with:
+
+- [`manual-dataset/README.md`](manual-dataset/README.md) — dataset design and usage
+- [`manual-dataset/train_roadmap.md`](manual-dataset/train_roadmap.md) — experiment history and decisions
+- [`manual-dataset/STAGE6_CREATION_AND_EVALUATION.md`](manual-dataset/STAGE6_CREATION_AND_EVALUATION.md) — Stage 6 creation and evaluation process
+
+Dataset and evaluation caveats are part of the research record. Do not present
+an automatic or model-assisted audit as human linguistic validation. Confirm
+licensing and source-provenance requirements before redistributing derived
+news text.
+
+## Other clients
+
+### Chrome extension
+
+1. Open `chrome://extensions` in Chrome.
+2. Enable **Developer mode**.
+3. Choose **Load unpacked**.
+4. Select `SinhalaJournalLLM/apps/chrome-extension/`.
+5. Set the API Base URL in the extension settings if you are using a local backend.
+
+### Google Docs add-on
+
+```bash
+cd SinhalaJournalLLM/apps/docs-addon
+npm install -g @google/clasp
+clasp login
+clasp push
+```
+
+`clasp push` updates the Apps Script project configured in `.clasp.json`. Review
+that project ID and use your own Apps Script project before pushing changes.
+
+## Tests
+
+Backend tests use fake Supabase clients and the mock provider, so they can run
+without a GPU:
+
+```bash
+cd SinhalaJournalLLM/apps/backend-api
+source .venv/bin/activate
+python -m pytest tests/ -v
+```
+
+Frontend checks:
+
+```bash
+cd SinhalaJournalLLM/apps/web-app
+npm test
+npm run lint
+npm run build
+```
+
+Training and dataset evaluations are task-specific. Use the commands documented
+inside their repositories and keep generated model checkpoints, predictions,
+private review sheets, and large experiment outputs out of ordinary Git commits.
+
+## Troubleshooting
+
+| Problem | What to check |
+|---|---|
+| Submodule directories are empty | Run `git submodule update --init --recursive` from the repository root |
+| A submodule shows a detached HEAD | This is normal for a pinned snapshot; switch to that submodule's branch before contributing there |
+| Frontend calls the public API instead of localhost | Change the API Base URL in the web app Settings page |
+| Backend fails during startup | Confirm `PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are present in `apps/backend-api/.env` |
+| `/health/ready` returns `503` | Check Supabase reachability and confirm the schema and migrations were applied |
+| Output reports the `mock` provider | Set `MODEL_PROVIDER=sinllama` and verify `SINLLAMA_API_URL` if you intend to use the GPU model |
+| Browser reports a CORS error | Add the exact frontend origin to `CORS_ORIGINS` and restart the backend |
+| Model server cannot find adapters | The adapter folders are not bundled; train or copy them and update the local paths |
+| Port already in use | Change the Uvicorn/Vite port and update the frontend API Base URL or CORS origin accordingly |
 
 ## Contributing
 
-1. Fork the relevant repository (product changes go to `SinhalaJournalLLM`, training changes to `SinAI-Training`, dataset changes to `manual-dataset`)
-2. Create a feature branch: `git checkout -b feature/your-feature-name`
-3. Commit with [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`)
-4. Open a Pull Request against that repo
-5. If the change should be reflected here, bump the submodule pointer in `R26-SE-037` (see [Keeping submodules current](#keeping-submodules-current))
+Make changes in the repository that owns the component:
 
----
+- Product, APIs, web UI, browser extension, or Docs add-on →
+  [`SinhalaJournalLLM`](https://github.com/wahallu/SinhalaJournalLLM)
+- Training, inference, or task evaluation →
+  [`SinAI-Training`](https://github.com/wahallu/SinAI-Training)
+- Grammar datasets and dataset tooling →
+  [`manual-dataset`](https://github.com/nisalfonseka/SinahalaJournalLLM-Sinhala-grammar-corrector-component)
+- Project-level documentation or pinned submodule versions → this repository
 
-## License
+Suggested workflow:
 
-This project is developed as part of **Research Project R26-SE-037**. All rights reserved.
+```bash
+git switch -c feature/short-description
+# make and test the change
+git status
+git commit -m "feat: describe the change"
+git push -u origin feature/short-description
+```
+
+Please do not commit credentials, `.env` files, model checkpoints, private
+review data, raw copyrighted corpora, generated prediction dumps, archives, or
+operating-system files such as `.DS_Store`.
+
+When reporting a problem, include the affected component, operating system,
+Python or Node version, exact command, error output, and whether the request was
+served by `sinllama`, a hosted provider, or `mock`. Remove secrets and personal
+data first.
+
+## Research team
+
+| Member | Research component |
+|---|---|
+| Nisal Fonseka | Sinhala grammar correction and morphological error detection |
+| Akash Jayasinghe | Controlled-length headline generation and visual synthesis |
+| Chathushka Navod | Abstractive and extractive Sinhala news summarization |
+| Sandun Hettiarachchi | Multi-publication editorial style adaptation and tone transfer |
+
+Supervised by **Prof. Nuwan Kodagoda** with **Ms. Poojani Gunathilake** as
+co-supervisor at the Faculty of Computing, SLIIT.
+
+## Citation and use
+
+If this repository supports academic work, cite the project and link to the
+exact commit or release used so the software and submodule versions are
+reproducible:
+
+```text
+SinAI Research & Engineering Group. (2026). SinhalaJournal-LLM:
+A Style-Controlled Large Language Model for Diverse Sri Lankan Newspaper
+Writing (Research Project R26-SE-037). https://github.com/nisalfonseka/R26-SE-037
+```
+
+This public repository currently does not include an open-source `LICENSE`
+file. Public visibility alone does not grant permission to copy, redistribute,
+or commercially use the code, datasets, model artifacts, or research content.
+Contact the research team for permissions beyond inspection and academic
+reference. Third-party models, news sources, libraries, and services retain
+their own terms and licenses.
